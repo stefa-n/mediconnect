@@ -1,0 +1,151 @@
+---
+import MainLayout from '../layouts/main.astro';
+
+const features = [
+  {
+    icon: "stethoscope",
+    title: "Digital MC Card",
+    description: "Scannable QR code shows your profile to healthcare providers instantly",
+  },
+  {
+    icon: "calendar",
+    title: "AI Appointment Scheduling",
+    description: "Book appointments with AI-powered severity estimation",
+  },
+  {
+    icon: "file-text",
+    title: "Complete Medical History",
+    description: "Access your records, prescriptions, and treatment history anytime",
+  },
+  {
+    icon: "heart",
+    title: "AI Medical Assistant",
+    description: "Chat with our intelligent medical agent for health queries",
+  },
+  {
+    icon: "shield",
+    title: "Secure & Private",
+    description: "Role-based access ensures your data stays protected",
+  },
+  {
+    icon: "zap",
+    title: "Real-time Updates",
+    description: "Instant notifications for appointments and prescriptions",
+  },
+];
+---
+
+<MainLayout content={{ title: 'MediConnect' }}>
+  <div class="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <!-- Hero Section -->
+    <section class="relative overflow-hidden">
+      <div
+        class="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 animate-pulse"
+        style="animation-duration: 3s"
+      />
+
+      <div class="container mx-auto px-4 py-20 relative">
+        <div class="max-w-4xl mx-auto text-center space-y-8">
+          <div
+            class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-4 animate-bounce"
+            style="animation-duration: 2s"
+          >
+            <svg class="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          </div>
+
+          <h1 class="text-5xl md:text-7xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
+            MediConnect
+          </h1>
+
+          <p class="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
+            Your complete healthcare platform. Connect patients, doctors, pharmacies, and hospitals in one secure
+            ecosystem.
+          </p>
+
+          <div class="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
+            <a
+              href="/auth"
+              class="inline-flex items-center justify-center text-lg px-8 py-6 bg-primary text-primary-foreground rounded-md hover:scale-105 transition-transform"
+            >
+              Get Started
+            </a>
+            <a
+              href="/auth"
+              class="inline-flex items-center justify-center text-lg px-8 py-6 border border-input bg-background rounded-md hover:bg-accent hover:text-accent-foreground"
+            >
+              Sign In
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="container mx-auto px-4 py-20">
+      <div class="text-center mb-16">
+        <h2 class="text-4xl font-bold mb-4">Powerful Features</h2>
+        <p class="text-xl text-muted-foreground">Everything you need for modern healthcare management</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        {features.map((feature, index) => (
+          <div
+            class="rounded-lg border-2 border-border bg-card text-card-foreground shadow hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+            style={`animation-delay: ${index * 100}ms`}
+          >
+            <div class="p-6">
+              <div class="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <svg class="w-7 h-7 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {feature.icon === "stethoscope" && (
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  )}
+                  {feature.icon === "calendar" && (
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  )}
+                  {feature.icon === "file-text" && (
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  )}
+                  {feature.icon === "heart" && (
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  )}
+                  {feature.icon === "shield" && (
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  )}
+                  {feature.icon === "zap" && (
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  )}
+                </svg>
+              </div>
+              <h3 class="text-xl font-semibold mb-2">{feature.title}</h3>
+            </div>
+            <div class="px-6 pb-6">
+              <p class="text-base text-muted-foreground">{feature.description}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="container mx-auto px-4 py-20">
+      <div class="max-w-4xl mx-auto rounded-lg border-2 border-border bg-gradient-to-r from-primary/10 to-secondary/10 shadow">
+        <div class="text-center space-y-4 py-12 px-6">
+          <h2 class="text-4xl font-bold">Ready to Transform Healthcare?</h2>
+          <p class="text-lg text-muted-foreground">
+            Join MediConnect today and experience the future of medical care management
+          </p>
+          <div class="pt-4">
+            <a
+              href="/auth"
+              class="inline-flex items-center justify-center text-lg px-10 py-6 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+            >
+              Create Your Account
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</MainLayout>
