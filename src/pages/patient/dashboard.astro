@@ -47,13 +47,24 @@ const placeholderUser = { email: 'loading@example.com' };
     <main id="dashboard-content" class="hidden container mx-auto px-4 py-8">
       <!-- Welcome Section -->
       <div class="mb-8">
-        <h2 class="text-3xl font-bold mb-2 text-foreground">
-          Welcome back, <span id="patient-name">Patient</span>!
-        </h2>
-        <p class="text-muted-foreground flex items-center gap-2">
-          <i class="fas fa-clock"></i>
-          <span id="current-date"></span>
-        </p>
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-3xl font-bold mb-2 text-foreground">
+              Welcome back, <span id="patient-name">Patient</span>!
+            </h2>
+            <p class="text-muted-foreground flex items-center gap-2">
+              <i class="fas fa-clock"></i>
+              <span id="current-date"></span>
+            </p>
+          </div>
+          <button
+            id="request-appointment-btn"
+            class="px-4 py-2.5 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 text-white rounded-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+          >
+            <i class="fas fa-calendar-plus mr-2"></i>
+            Request Appointment
+          </button>
+        </div>
       </div>
 
       <!-- Stats Grid - 4 cards in a row -->
@@ -69,11 +80,20 @@ const placeholderUser = { email: 'loading@example.com' };
         </div>
         <div class="stats-card">
           <StatsCard 
+            label="Pending Requests" 
+            value="0" 
+            icon="fas fa-clock" 
+            color="text-orange-500"
+            delay={100}
+          />
+        </div>
+        <div class="stats-card">
+          <StatsCard 
             label="Active Prescriptions" 
             value="0" 
             icon="fas fa-pills" 
             color="text-green-500"
-            delay={100}
+            delay={200}
           />
         </div>
         <div class="stats-card">
@@ -82,17 +102,22 @@ const placeholderUser = { email: 'loading@example.com' };
             value="0" 
             icon="fas fa-file-medical" 
             color="text-purple-500"
-            delay={200}
-          />
-        </div>
-        <div class="stats-card">
-          <StatsCard 
-            label="Health Score" 
-            value="--" 
-            icon="fas fa-heart" 
-            color="text-red-500"
             delay={300}
           />
+        </div>
+      </div>
+
+      <!-- Appointment Requests Section -->
+      <div class="mb-6 bg-card rounded-xl shadow-lg border border-border overflow-hidden">
+        <div class="p-6 border-b border-border bg-gradient-to-r from-orange-50 to-yellow-50">
+          <h3 class="text-xl font-bold text-foreground flex items-center gap-2">
+            <i class="fas fa-clock text-orange-600"></i>
+            Your Appointment Requests
+          </h3>
+          <p class="text-sm text-muted-foreground mt-1">Track the status of your appointment requests</p>
+        </div>
+        <div id="appointment-requests-container" class="p-6">
+          <!-- Appointment requests will be loaded here -->
         </div>
       </div>
 
@@ -120,9 +145,297 @@ const placeholderUser = { email: 'loading@example.com' };
     </main>
   </div>
 
+  <!-- Custom Toast Notifications -->
+  <div id="toast-container" class="fixed top-4 right-4 z-[100] space-y-3 pointer-events-none">
+    <!-- Toasts will be dynamically inserted here -->
+  </div>
+
+  <!-- Custom Confirmation Modal -->
+  <div id="confirm-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] p-4" style="display: none; align-items: center; justify-content: center;">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all scale-95 opacity-0" id="confirm-modal-content">
+      <div class="p-6">
+        <div class="flex items-start gap-4">
+          <div id="confirm-icon" class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center">
+            <i class="fas fa-question-circle text-2xl"></i>
+          </div>
+          <div class="flex-1">
+            <h3 id="confirm-title" class="text-xl font-bold text-gray-900 mb-2"></h3>
+            <p id="confirm-message" class="text-gray-600 text-sm leading-relaxed whitespace-pre-line"></p>
+          </div>
+        </div>
+      </div>
+      <div class="px-6 pb-6 flex gap-3">
+        <button 
+          id="confirm-cancel-btn"
+          class="flex-1 px-4 py-2.5 rounded-lg border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 font-medium text-gray-700 transition-all"
+        >
+          Cancel
+        </button>
+        <button 
+          id="confirm-ok-btn"
+          class="flex-1 px-4 py-2.5 rounded-lg font-medium text-white transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+        >
+          Confirm
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Request Appointment Modal -->
+  <div id="request-appointment-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 p-4" style="display: none; align-items: center; justify-content: center;">
+    <div id="request-modal-content" class="bg-card rounded-xl shadow-2xl max-w-2xl w-full border border-border transform transition-all scale-95 opacity-0 max-h-[90vh] overflow-y-auto">
+      <div class="p-6 border-b border-border bg-gradient-to-r from-primary/10 to-blue-500/10 sticky top-0 z-10">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xl font-bold text-foreground">Request New Appointment</h3>
+          <button id="close-request-modal" class="text-muted-foreground hover:text-foreground transition-colors">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+      </div>
+      
+      <form id="request-appointment-form" class="p-6 space-y-4">
+        <!-- Step 1: Select Hospital -->
+        <div>
+          <label class="block text-sm font-medium text-foreground mb-2">
+            <i class="fas fa-hospital mr-2 text-primary"></i>
+            Select Hospital *
+          </label>
+          <select 
+            id="hospital-select" 
+            required
+            class="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="">-- Choose a hospital --</option>
+          </select>
+        </div>
+
+        <!-- Step 2: Select Department (shows after hospital selected) -->
+        <div id="department-selection" class="hidden">
+          <label class="block text-sm font-medium text-foreground mb-2">
+            <i class="fas fa-stethoscope mr-2 text-blue-600"></i>
+            Medical Department *
+          </label>
+          <input 
+            type="text"
+            id="department-select"
+            list="patient-departments-list"
+            required
+            class="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="Type a department name (e.g., Cardiology, Pediatrics)"
+          />
+          <datalist id="patient-departments-list">
+            <!-- Will be populated dynamically from hospital's available departments -->
+          </datalist>
+          <p class="text-xs text-muted-foreground mt-1">
+            <i class="fas fa-info-circle mr-1"></i>
+            Available departments will appear based on hospital doctors
+          </p>
+        </div>
+
+        <!-- Reason for Visit -->
+        <div>
+          <label class="block text-sm font-medium text-foreground mb-2">
+            <i class="fas fa-notes-medical mr-2 text-green-600"></i>
+            Reason for Visit *
+          </label>
+          <textarea 
+            id="reason-input"
+            required
+            rows="4"
+            class="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+            placeholder="Please describe your symptoms or reason for the appointment..."
+          ></textarea>
+        </div>
+
+        <!-- Preferred Date -->
+        <div>
+          <label class="block text-sm font-medium text-foreground mb-2">
+            <i class="fas fa-calendar mr-2 text-purple-600"></i>
+            Preferred Date (Optional)
+          </label>
+          <input 
+            type="date" 
+            id="preferred-date-input"
+            min=""
+            class="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+
+        <!-- Preferred Time Slot -->
+        <div>
+          <label class="block text-sm font-medium text-foreground mb-2">
+            <i class="fas fa-clock mr-2 text-orange-600"></i>
+            Preferred Time of Day (Optional)
+          </label>
+          <select 
+            id="time-slot-select"
+            class="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="">-- No preference --</option>
+            <option value="morning">Morning (8:00 AM - 12:00 PM)</option>
+            <option value="afternoon">Afternoon (12:00 PM - 5:00 PM)</option>
+            <option value="evening">Evening (5:00 PM - 8:00 PM)</option>
+          </select>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="flex gap-3 pt-4">
+          <button 
+            type="button"
+            id="cancel-request-btn"
+            class="flex-1 px-4 py-2.5 border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 rounded-lg font-medium text-gray-700 transition-all"
+          >
+            Cancel
+          </button>
+          <button 
+            type="submit"
+            class="flex-1 px-4 py-2.5 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 text-white rounded-lg transition-all shadow-lg hover:shadow-xl font-medium"
+          >
+            <i class="fas fa-paper-plane mr-2"></i>
+            Submit Request
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     import { supabase } from '../../lib/supabase';
     import type { Appointment, Prescription, MedicalRecord } from '../../lib/types';
+
+    let currentUserId: string | null = null;
+    let appointmentRequests: any[] = [];
+
+    // Custom Toast Notification System
+    type ToastType = 'success' | 'error' | 'warning' | 'info';
+    
+    function showToast(message: string, type: ToastType = 'info', duration: number = 4000) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = 'pointer-events-auto transform translate-x-full transition-all duration-300 ease-out';
+      
+      const icons = {
+        success: { icon: 'fa-check-circle', bgColor: 'bg-green-500', textColor: 'text-green-50' },
+        error: { icon: 'fa-times-circle', bgColor: 'bg-red-500', textColor: 'text-red-50' },
+        warning: { icon: 'fa-exclamation-triangle', bgColor: 'bg-orange-500', textColor: 'text-orange-50' },
+        info: { icon: 'fa-info-circle', bgColor: 'bg-blue-500', textColor: 'text-blue-50' }
+      };
+
+      const config = icons[type];
+      
+      toast.innerHTML = `
+        <div class="flex items-start gap-3 ${config.bgColor} ${config.textColor} px-5 py-4 rounded-xl shadow-2xl min-w-[300px] max-w-md backdrop-blur-sm border border-white/20">
+          <i class="fas ${config.icon} text-xl mt-0.5 flex-shrink-0"></i>
+          <p class="flex-1 font-medium leading-relaxed">${message}</p>
+          <button onclick="this.closest('[class*=translate]').remove()" class="ml-2 hover:opacity-80 transition-opacity flex-shrink-0">
+            <i class="fas fa-times text-sm"></i>
+          </button>
+        </div>
+      `;
+      
+      container.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.classList.remove('translate-x-full');
+        toast.classList.add('translate-x-0');
+      }, 10);
+      
+      setTimeout(() => {
+        toast.classList.add('translate-x-full', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+    }
+
+    // Custom Confirmation Dialog
+    function showConfirm(
+      title: string, 
+      message: string, 
+      options: {
+        type?: 'danger' | 'warning' | 'info',
+        confirmText?: string,
+        cancelText?: string
+      } = {}
+    ): Promise<boolean> {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('confirm-modal');
+        const modalContent = document.getElementById('confirm-modal-content');
+        const iconEl = document.getElementById('confirm-icon');
+        const titleEl = document.getElementById('confirm-title');
+        const messageEl = document.getElementById('confirm-message');
+        const confirmBtn = document.getElementById('confirm-ok-btn');
+        const cancelBtn = document.getElementById('confirm-cancel-btn');
+        
+        if (!modal || !modalContent || !iconEl || !titleEl || !messageEl || !confirmBtn || !cancelBtn) {
+          resolve(false);
+          return;
+        }
+
+        const type = options.type || 'warning';
+        const configs = {
+          danger: { 
+            icon: 'fa-exclamation-triangle', 
+            iconBg: 'bg-red-100 text-red-600',
+            btnBg: 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800'
+          },
+          warning: { 
+            icon: 'fa-exclamation-circle', 
+            iconBg: 'bg-orange-100 text-orange-600',
+            btnBg: 'bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800'
+          },
+          info: { 
+            icon: 'fa-info-circle', 
+            iconBg: 'bg-blue-100 text-blue-600',
+            btnBg: 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'
+          }
+        };
+
+        const config = configs[type];
+        
+        iconEl.className = `flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${config.iconBg}`;
+        iconEl.querySelector('i')!.className = `fas ${config.icon} text-2xl`;
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        confirmBtn.textContent = options.confirmText || 'Confirm';
+        confirmBtn.className = `flex-1 px-4 py-2.5 rounded-lg font-medium text-white transition-all shadow-lg hover:shadow-xl transform hover:scale-105 ${config.btnBg}`;
+        cancelBtn.textContent = options.cancelText || 'Cancel';
+        
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+        
+        setTimeout(() => {
+          modalContent.classList.remove('scale-95', 'opacity-0');
+          modalContent.classList.add('scale-100', 'opacity-100');
+        }, 10);
+        
+        const closeModal = (result: boolean) => {
+          modalContent.classList.add('scale-95', 'opacity-0');
+          modalContent.classList.remove('scale-100', 'opacity-100');
+          
+          setTimeout(() => {
+            modal.style.display = 'none';
+            modal.classList.add('hidden');
+            resolve(result);
+          }, 200);
+        };
+        
+        const handleConfirm = () => {
+          confirmBtn.removeEventListener('click', handleConfirm);
+          cancelBtn.removeEventListener('click', handleCancel);
+          closeModal(true);
+        };
+        
+        const handleCancel = () => {
+          confirmBtn.removeEventListener('click', handleConfirm);
+          cancelBtn.removeEventListener('click', handleCancel);
+          closeModal(false);
+        };
+        
+        confirmBtn.addEventListener('click', handleConfirm);
+        cancelBtn.addEventListener('click', handleCancel);
+      });
+    }
 
     // Set current date
     const dateElement = document.getElementById('current-date');
@@ -199,6 +512,7 @@ const placeholderUser = { email: 'loading@example.com' };
 
         // Fetch all data in parallel for better performance
         const userId = profile?.id || user.id;
+        currentUserId = userId;
 
         // Check if tables exist before querying
         let appointments: any[] = [];
@@ -206,13 +520,13 @@ const placeholderUser = { email: 'loading@example.com' };
         let recordsCount = 0;
 
         try {
-          const [appointmentsResult, prescriptionsResult, recordsResult] = await Promise.all([
+          const [appointmentsResult, prescriptionsResult, recordsResult, requestsResult] = await Promise.all([
             // Fetch appointments
             supabase
               .from('appointments')
               .select(`
                 *,
-                doctor:profiles!appointments_doctor_id_fkey(id, full_name)
+                doctor:profiles!appointments_medic_id_fkey(id, full_name)
               `)
               .eq('patient_id', userId)
               .gte('appointment_date', new Date().toISOString().split('T')[0])
@@ -235,12 +549,25 @@ const placeholderUser = { email: 'loading@example.com' };
             supabase
               .from('medical_records')
               .select('*', { count: 'exact', head: true })
+              .eq('patient_id', userId),
+
+            // Fetch appointment requests
+            supabase
+              .from('appointment_requests')
+              .select(`
+                *,
+                hospital:hospitals(id, name),
+                medic:profiles!appointment_requests_medic_id_fkey(id, full_name),
+                appointment:appointments(id, appointment_date, status)
+              `)
               .eq('patient_id', userId)
+              .order('created_at', { ascending: false })
           ]);
 
           appointments = appointmentsResult.data || [];
           prescriptions = prescriptionsResult.data || [];
           recordsCount = recordsResult.count || 0;
+          appointmentRequests = requestsResult.data || [];
 
           if (appointmentsResult.error && appointmentsResult.error.code !== 'PGRST116') {
             console.error('Error fetching appointments:', appointmentsResult.error);
@@ -253,17 +580,26 @@ const placeholderUser = { email: 'loading@example.com' };
           if (recordsResult.error && recordsResult.error.code !== 'PGRST116') {
             console.error('Error fetching records count:', recordsResult.error);
           }
+
+          if (requestsResult.error && requestsResult.error.code !== 'PGRST116') {
+            console.error('Error fetching appointment requests:', requestsResult.error);
+          }
         } catch (error) {
           console.error('Error fetching data:', error);
           // Continue with empty data - tables might not exist yet
         }
 
         // Update stats
+        const pendingRequests = appointmentRequests.filter(r => r.status === 'pending').length;
         updateStats(
           appointments?.length || 0,
+          pendingRequests,
           prescriptions?.length || 0,
           recordsCount || 0
         );
+
+        // Update appointment requests
+        updateAppointmentRequests(appointmentRequests);
 
         // Update appointments list
         if (appointments && appointments.length > 0) {
@@ -346,7 +682,7 @@ const placeholderUser = { email: 'loading@example.com' };
       }
     }
 
-    function updateStats(appointments: number, prescriptions: number, records: number) {
+    function updateStats(appointments: number, pendingRequests: number, prescriptions: number, records: number) {
       // Select the stat card containers
       const statsGrid = document.getElementById('stats-grid');
       if (!statsGrid) return;
@@ -359,30 +695,22 @@ const placeholderUser = { email: 'loading@example.com' };
         if (valueEl) valueEl.textContent = appointments.toString();
       }
       
-      // Update Active Prescriptions
+      // Update Pending Requests
       if (statCards[1]) {
         const valueEl = statCards[1].querySelector('.text-3xl');
+        if (valueEl) valueEl.textContent = pendingRequests.toString();
+      }
+      
+      // Update Active Prescriptions
+      if (statCards[2]) {
+        const valueEl = statCards[2].querySelector('.text-3xl');
         if (valueEl) valueEl.textContent = prescriptions.toString();
       }
       
       // Update Medical Records
-      if (statCards[2]) {
-        const valueEl = statCards[2].querySelector('.text-3xl');
-        if (valueEl) valueEl.textContent = records.toString();
-      }
-      
-      // Calculate health score (mock calculation based on data)
-      // Base score of 85, add points for having appointments/prescriptions/records
-      let healthScore = 85;
-      if (appointments > 0) healthScore += 5;
-      if (prescriptions > 0 && prescriptions <= 2) healthScore += 5; // Not too many meds
-      if (records > 5) healthScore += 5; // Good medical history
-      
-      healthScore = Math.min(healthScore, 100); // Cap at 100
-      
       if (statCards[3]) {
         const valueEl = statCards[3].querySelector('.text-3xl');
-        if (valueEl) valueEl.textContent = `${healthScore}%`;
+        if (valueEl) valueEl.textContent = records.toString();
       }
     }
 
@@ -489,7 +817,324 @@ const placeholderUser = { email: 'loading@example.com' };
       }).join('');
     }
 
-    // Load data when page loads
+    function updateAppointmentRequests(requests: any[]) {
+      const container = document.getElementById('appointment-requests-container');
+      if (!container) return;
+
+      if (requests.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 text-muted-foreground">
+            <i class="fas fa-calendar-plus text-5xl mb-4 opacity-50"></i>
+            <p class="text-lg font-medium mb-2">No appointment requests yet</p>
+            <p class="text-sm">Click "Request Appointment" to get started</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = requests.map((request) => {
+        const statusConfig: Record<string, any> = {
+          pending: { bg: 'bg-orange-100', text: 'text-orange-700', icon: 'fa-clock', label: 'Pending Review' },
+          approved: { bg: 'bg-green-100', text: 'text-green-700', icon: 'fa-check-circle', label: 'Approved' },
+          rejected: { bg: 'bg-red-100', text: 'text-red-700', icon: 'fa-times-circle', label: 'Rejected' },
+          cancelled: { bg: 'bg-gray-100', text: 'text-gray-700', icon: 'fa-ban', label: 'Cancelled' }
+        };
+
+        const config = statusConfig[request.status] || statusConfig.pending;
+        const createdDate = new Date(request.created_at).toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          year: 'numeric' 
+        });
+
+        return `
+          <div class="p-4 rounded-lg border border-border hover:bg-accent/30 transition-colors mb-3">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-2">
+                  <i class="fas fa-hospital text-primary"></i>
+                  <p class="font-semibold text-foreground">${request.hospital?.name || 'Hospital'}</p>
+                </div>
+                ${request.department ? `
+                  <p class="text-sm text-blue-600 ml-6 font-medium">
+                    <i class="fas fa-stethoscope mr-1"></i>
+                    ${request.department}
+                  </p>
+                ` : ''}
+                ${request.medic ? `
+                  <p class="text-sm text-muted-foreground ml-6">
+                    <i class="fas fa-user-md mr-1"></i>
+                    Assigned to: Dr. ${request.medic.full_name}
+                  </p>
+                ` : `
+                  <p class="text-sm text-muted-foreground ml-6">
+                    <i class="fas fa-users-medical mr-1"></i>
+                    Awaiting doctor assignment
+                  </p>
+                `}
+              </div>
+              <span class="px-3 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text} flex items-center gap-1">
+                <i class="fas ${config.icon}"></i>
+                ${config.label}
+              </span>
+            </div>
+            
+            <div class="bg-accent/50 rounded p-3 mb-2">
+              <p class="text-sm text-foreground"><strong>Reason:</strong> ${request.reason}</p>
+            </div>
+
+            <div class="flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                <i class="fas fa-calendar mr-1"></i>
+                Requested on ${createdDate}
+              </span>
+              ${request.preferred_date ? `
+                <span>
+                  <i class="fas fa-clock mr-1"></i>
+                  Preferred: ${new Date(request.preferred_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              ` : ''}
+            </div>
+
+            ${request.status === 'approved' && request.appointment ? `
+              <div class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p class="text-sm font-medium text-green-800">
+                  <i class="fas fa-check-circle mr-2"></i>
+                  Appointment scheduled for ${new Date(request.appointment.appointment_date).toLocaleString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  })}
+                </p>
+              </div>
+            ` : ''}
+
+            ${request.status === 'rejected' && request.rejection_reason ? `
+              <div class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p class="text-sm font-medium text-red-800 mb-1">
+                  <i class="fas fa-info-circle mr-2"></i>
+                  Reason for rejection:
+                </p>
+                <p class="text-sm text-red-700">${request.rejection_reason}</p>
+              </div>
+            ` : ''}
+
+            ${request.status === 'pending' ? `
+              <button 
+                class="cancel-request-btn mt-3 w-full px-4 py-2 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                data-request-id="${request.id}"
+              >
+                <i class="fas fa-times-circle mr-2"></i>
+                Cancel Request
+              </button>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+
+      // Attach cancel button listeners
+      document.querySelectorAll('.cancel-request-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const requestId = (e.currentTarget as HTMLElement).dataset.requestId;
+          if (requestId) {
+            const confirmed = await showConfirm(
+              'Cancel Appointment Request?',
+              'Are you sure you want to cancel this appointment request?',
+              { type: 'warning', confirmText: 'Yes, Cancel', cancelText: 'No, Keep It' }
+            );
+            if (confirmed) {
+              await cancelAppointmentRequest(requestId);
+            }
+          }
+        });
+      });
+    }
+
+    async function cancelAppointmentRequest(requestId: string) {
+      try {
+        const { error } = await supabase
+          .from('appointment_requests')
+          .update({ status: 'cancelled' })
+          .eq('id', requestId);
+
+        if (error) throw error;
+
+        showToast('Appointment request cancelled successfully.', 'success');
+        // Reload the page to refresh data
+        location.reload();
+      } catch (error: any) {
+        console.error('Error cancelling request:', error);
+        showToast('Failed to cancel request. Please try again.', 'error');
+      }
+    }
+
+    // Modal Functions
+    function openRequestAppointmentModal() {
+      const modal = document.getElementById('request-appointment-modal');
+      const modalContent = document.getElementById('request-modal-content');
+      
+      if (!modal || !modalContent) return;
+
+      // Set minimum date to today
+      const dateInput = document.getElementById('preferred-date-input') as HTMLInputElement;
+      if (dateInput) {
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.min = today;
+      }
+
+      // Load hospitals
+      loadHospitalsForRequest();
+
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+      
+      setTimeout(() => {
+        modalContent.classList.remove('scale-95', 'opacity-0');
+        modalContent.classList.add('scale-100', 'opacity-100');
+      }, 10);
+    }
+
+    function closeRequestAppointmentModal() {
+      const modal = document.getElementById('request-appointment-modal');
+      const modalContent = document.getElementById('request-modal-content');
+      
+      if (modal && modalContent) {
+        modalContent.classList.add('scale-95', 'opacity-0');
+        modalContent.classList.remove('scale-100', 'opacity-100');
+        
+        setTimeout(() => {
+          modal.classList.add('hidden');
+          modal.style.display = 'none';
+          // Reset form
+          const form = document.getElementById('request-appointment-form') as HTMLFormElement;
+          form?.reset();
+          const doctorSelection = document.getElementById('doctor-selection');
+          if (doctorSelection) doctorSelection.classList.add('hidden');
+        }, 200);
+      }
+    }
+
+    async function loadHospitalsForRequest() {
+      const select = document.getElementById('hospital-select') as HTMLSelectElement;
+      if (!select) return;
+
+      try {
+        const { data: hospitals, error } = await supabase
+          .from('hospitals')
+          .select('id, name, address')
+          .order('name');
+
+        if (error) throw error;
+
+        select.innerHTML = '<option value="">-- Choose a hospital --</option>';
+        hospitals?.forEach((hospital: any) => {
+          const option = document.createElement('option');
+          option.value = hospital.id;
+          option.textContent = `${hospital.name}${hospital.address ? ` - ${hospital.address}` : ''}`;
+          select.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Error loading hospitals:', error);
+        showToast('Failed to load hospitals. Please try again.', 'error');
+      }
+    }
+
+    async function loadDepartmentsForHospital(hospitalId: string) {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('department')
+          .eq('hospital_id', hospitalId)
+          .eq('role', 'hospital_medic')
+          .not('department', 'is', null)
+          .order('department');
+
+        if (error) {
+          console.error('Error loading departments:', error);
+          return;
+        }
+
+        // Get unique departments
+        const uniqueDepts = [...new Set(data?.map(d => d.department).filter(Boolean))];
+        
+        // Populate datalist
+        const datalist = document.getElementById('patient-departments-list');
+        if (datalist) {
+          datalist.innerHTML = uniqueDepts.map(dept => 
+            `<option value="${dept}">${dept}</option>`
+          ).join('');
+        }
+      } catch (error) {
+        console.error('Error loading departments:', error);
+      }
+    }
+
+    async function submitAppointmentRequest(e: Event) {
+      e.preventDefault();
+      
+      if (!currentUserId) {
+        showToast('Please log in to request an appointment.', 'error');
+        return;
+      }
+
+      const hospitalId = (document.getElementById('hospital-select') as HTMLSelectElement).value;
+      const department = (document.getElementById('department-select') as HTMLInputElement).value.trim();
+      const reason = (document.getElementById('reason-input') as HTMLTextAreaElement).value;
+      const preferredDate = (document.getElementById('preferred-date-input') as HTMLInputElement).value || null;
+      const timeSlot = (document.getElementById('time-slot-select') as HTMLSelectElement).value || null;
+
+      if (!hospitalId || !department || !reason) {
+        showToast('Please fill in all required fields (hospital, department, and reason).', 'warning');
+        return;
+      }
+
+      try {
+        const { error } = await supabase
+          .from('appointment_requests')
+          .insert({
+            patient_id: currentUserId,
+            hospital_id: hospitalId,
+            medic_id: null, // No specific doctor - will be assigned based on department
+            department: department,
+            reason: reason,
+            preferred_date: preferredDate,
+            preferred_time_slot: timeSlot,
+            status: 'pending'
+          });
+
+        if (error) throw error;
+
+        showToast('Appointment request submitted successfully! You will be notified when a doctor reviews your request.', 'success');
+        closeRequestAppointmentModal();
+        // Reload the page to refresh data
+        setTimeout(() => location.reload(), 1500);
+      } catch (error: any) {
+        console.error('Error submitting request:', error);
+        showToast('Failed to submit request. Please try again.', 'error');
+      }
+    }
+
+    // Event Listeners
+    document.getElementById('request-appointment-btn')?.addEventListener('click', openRequestAppointmentModal);
+    document.getElementById('close-request-modal')?.addEventListener('click', closeRequestAppointmentModal);
+    document.getElementById('cancel-request-btn')?.addEventListener('click', closeRequestAppointmentModal);
+    document.getElementById('request-appointment-form')?.addEventListener('submit', submitAppointmentRequest);
+    
+    // Hospital selection change - show department selector
+    document.getElementById('hospital-select')?.addEventListener('change', (e) => {
+      const hospitalId = (e.target as HTMLSelectElement).value;
+      const departmentSection = document.getElementById('department-selection');
+      
+      if (hospitalId && departmentSection) {
+        departmentSection.classList.remove('hidden');
+        loadDepartmentsForHospital(hospitalId);
+      } else if (departmentSection) {
+        departmentSection.classList.add('hidden');
+      }
+    });
+
+    // Load dashboard
     loadDashboardData();
   </script>
 

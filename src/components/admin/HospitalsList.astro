@@ -1,0 +1,78 @@
+---
+interface Props {
+  hospitals?: any[];
+  onAdd?: string;
+  onEdit?: string;
+}
+
+const { hospitals = [], onAdd, onEdit } = Astro.props;
+---
+
+<div class="bg-card border border-border rounded-lg shadow-sm">
+  <div class="p-6 border-b border-border">
+    <div class="flex items-center justify-between">
+      <div>
+        <h3 class="text-xl font-bold text-foreground flex items-center gap-2">
+          <i class="fas fa-hospital"></i>
+          Hospitals
+        </h3>
+        <p class="text-sm text-muted-foreground mt-1">Manage hospital facilities</p>
+      </div>
+      <button 
+        id="add-hospital-btn"
+        class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
+      >
+        <i class="fas fa-plus"></i>
+        Add Hospital
+      </button>
+    </div>
+  </div>
+  
+  <div class="p-6" id="hospitals-list">
+    {hospitals.length === 0 ? (
+      <div class="text-center py-12 text-muted-foreground">
+        <i class="fas fa-hospital text-5xl mb-4 opacity-50"></i>
+        <p class="text-lg font-medium mb-2">No hospitals yet</p>
+        <p class="text-sm">Add your first hospital to get started</p>
+      </div>
+    ) : (
+      <div class="space-y-4">
+        {hospitals.map((hospital) => (
+          <div class="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                <i class="fas fa-hospital text-primary text-xl"></i>
+              </div>
+              <div>
+                <p class="font-semibold text-foreground">{hospital.name}</p>
+                <p class="text-sm text-muted-foreground">{hospital.address || 'No address'}</p>
+                {hospital.phone && (
+                  <p class="text-xs text-muted-foreground mt-1">
+                    <i class="fas fa-phone text-xs mr-1"></i>
+                    {hospital.phone}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button 
+                class="edit-hospital-btn px-3 py-2 text-sm border border-border rounded-lg hover:bg-accent transition-colors"
+                data-hospital-id={hospital.id}
+              >
+                <i class="fas fa-edit mr-1"></i>
+                Edit
+              </button>
+              <button 
+                class="delete-hospital-btn px-3 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                data-hospital-id={hospital.id}
+              >
+                <i class="fas fa-trash mr-1"></i>
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+</div>

@@ -1,0 +1,1175 @@
+---
+import MainLayout from '../../../layouts/main.astro';
+import Navbar from '../../../components/Navbar.astro';
+import StatsCard from '../../../components/dashboard/StatsCard.astro';
+
+// Pass placeholder user for navbar (will be updated client-side)
+const placeholderUser = { email: 'loading@example.com' };
+---
+
+<MainLayout content={{ title: 'Hospital Admin Dashboard - MediConnect' }}>
+  <!-- Font Awesome for icons - Must load before content renders -->
+  <link 
+    rel="stylesheet" 
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
+    integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+    crossorigin="anonymous"
+    referrerPolicy="no-referrer"
+  />
+  
+  <Navbar user={placeholderUser} />
+  
+  <div class="min-h-screen bg-gradient-to-br from-blue-50 via-background to-purple-50">
+    <!-- Loading State -->
+    <div id="loading-screen" class="flex items-center justify-center min-h-screen">
+      <div class="relative">
+        <div class="flex flex-col items-center space-y-6">
+          <div class="relative">
+            <div class="absolute inset-0 w-24 h-24 rounded-full bg-blue-500/20 animate-ping"></div>
+            <div class="absolute inset-2 w-20 h-20 rounded-full bg-blue-500/30 animate-pulse"></div>
+            <div class="relative w-24 h-24 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center shadow-2xl">
+              <i class="fas fa-hospital text-white text-4xl animate-pulse"></i>
+            </div>
+          </div>
+          <div class="text-center">
+            <h2 class="text-2xl font-bold text-foreground mb-2">MediConnect</h2>
+            <p class="text-muted-foreground text-sm mb-4">Loading hospital dashboard...</p>
+            <div class="w-48 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-blue-600 to-purple-600 rounded-full animate-progress"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Toast Notifications -->
+    <div id="toast-container" class="fixed top-4 right-4 z-[100] space-y-3 pointer-events-none">
+      <!-- Toasts will be dynamically inserted here -->
+    </div>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="confirm-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] p-4" style="display: none; align-items: center; justify-content: center;">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all scale-95 opacity-0" id="confirm-modal-content">
+        <div class="p-6">
+          <div class="flex items-start gap-4">
+            <div id="confirm-icon" class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center">
+              <i class="fas fa-question-circle text-2xl"></i>
+            </div>
+            <div class="flex-1">
+              <h3 id="confirm-title" class="text-xl font-bold text-gray-900 mb-2"></h3>
+              <p id="confirm-message" class="text-gray-600 text-sm leading-relaxed whitespace-pre-line"></p>
+            </div>
+          </div>
+        </div>
+        <div class="px-6 pb-6 flex gap-3">
+          <button 
+            id="confirm-cancel-btn"
+            class="flex-1 px-4 py-2.5 rounded-lg border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 font-medium text-gray-700 transition-all"
+          >
+            Cancel
+          </button>
+          <button 
+            id="confirm-ok-btn"
+            class="flex-1 px-4 py-2.5 rounded-lg font-medium text-white transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard Content -->
+    <main id="dashboard-content" class="hidden container mx-auto px-4 py-8">
+      <!-- Welcome Section -->
+      <div class="mb-8">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-3xl font-bold mb-2 text-foreground">
+              <span id="hospital-name">Hospital</span> Dashboard
+            </h2>
+            <p class="text-muted-foreground">
+              Welcome back, <span id="admin-name">Admin</span>! Here's what's happening today.
+            </p>
+          </div>
+          <div class="flex gap-3">
+            <button
+              id="add-medic-btn"
+              class="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+            >
+              <i class="fas fa-user-md mr-2"></i>
+              Add Medic
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div id="stats-grid" class="grid gap-6 mb-8">
+        <StatsCard 
+          label="Total Patients"
+          value="0"
+          icon="fa-users"
+          color="text-blue-600"
+          delay={0}
+        />
+        <StatsCard 
+          label="Active Medics"
+          value="0"
+          icon="fa-user-md"
+          color="text-green-600"
+          delay={100}
+        />
+        <StatsCard 
+          label="Today's Appointments"
+          value="0"
+          icon="fa-calendar-check"
+          color="text-purple-600"
+          delay={200}
+        />
+        <StatsCard 
+          label="Total Appointments"
+          value="0"
+          icon="fa-clipboard-list"
+          color="text-orange-600"
+          delay={300}
+        />
+      </div>
+
+      <!-- Medical Staff Section -->
+      <div class="mb-8">
+        <div class="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
+          <div class="p-6 border-b border-border bg-gradient-to-r from-blue-50 to-purple-50">
+            <h3 class="text-xl font-bold text-foreground flex items-center gap-2">
+              <i class="fas fa-user-md text-blue-600"></i>
+              Medical Staff
+            </h3>
+            <p class="text-sm text-muted-foreground mt-1">Manage doctors and medics at your hospital</p>
+          </div>
+          <div id="medics-list" class="p-6">
+            <!-- Medics will be rendered here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Appointments Section -->
+      <div class="mb-8">
+        <div class="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
+          <div class="p-6 border-b border-border bg-gradient-to-r from-purple-50 to-pink-50">
+            <h3 class="text-xl font-bold text-foreground flex items-center gap-2">
+              <i class="fas fa-calendar-alt text-purple-600"></i>
+              Recent Appointments
+            </h3>
+            <p class="text-sm text-muted-foreground mt-1">Latest appointments scheduled at your hospital</p>
+          </div>
+          <div id="appointments-list" class="p-6">
+            <!-- Appointments will be rendered here -->
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add/Edit Medic Modal -->
+  <div id="medic-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 p-4" style="display: none; align-items: center; justify-content: center;">
+    <div id="medic-modal-content" class="bg-card rounded-xl shadow-2xl max-w-md w-full border border-border transform transition-all scale-95 opacity-0">
+      <div class="p-6 border-b border-border">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xl font-bold text-foreground" id="medic-modal-title">Add Medic to Hospital</h3>
+          <button id="close-medic-modal" class="text-muted-foreground hover:text-foreground transition-colors">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+      </div>
+      <div class="p-6 space-y-4">
+        <input type="hidden" id="medic-id" />
+        
+        <!-- User Selection (shown when adding) -->
+        <div id="medic-search-section">
+          <label class="block text-sm font-medium text-foreground mb-2">
+            Search for User by Email
+          </label>
+          <div class="relative">
+            <input 
+              type="email" 
+              id="medic-email-search" 
+              class="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Start typing email address..."
+              autocomplete="off"
+            />
+            <div class="absolute right-2 top-1/2 -translate-y-1/2">
+              <i id="medic-search-spinner" class="fas fa-spinner fa-spin text-blue-600 hidden"></i>
+            </div>
+          </div>
+          <p class="text-xs text-muted-foreground mt-2">
+            ℹ️ Search for users to assign as medics at your hospital
+          </p>
+          <div id="medic-search-results-dropdown" class="hidden mt-1 max-h-60 overflow-y-auto border border-border rounded-lg bg-white shadow-lg"></div>
+        </div>
+
+        <!-- Medic Form (shown when editing or after selection) -->
+        <form id="medic-form" class="hidden space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-foreground mb-2">Email</label>
+            <input 
+              type="email" 
+              id="medic-email" 
+              readonly
+              class="w-full px-4 py-2 border border-border rounded-lg bg-gray-50 text-gray-600"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-foreground mb-2">Full Name *</label>
+            <input 
+              type="text" 
+              id="medic-fullname" 
+              required
+              class="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter full name"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-foreground mb-2">Medical Department / Specialization *</label>
+            <input 
+              type="text" 
+              id="medic-specialization" 
+              list="departments-list"
+              required
+              class="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="e.g., Cardiology, Neurology, Pediatrics, General Practice"
+            />
+            <datalist id="departments-list">
+              <!-- Will be populated dynamically from existing departments -->
+            </datalist>
+            <p class="text-xs text-muted-foreground mt-1">
+              <i class="fas fa-info-circle mr-1"></i>
+              Type any department name - suggestions will appear as you add more doctors
+            </p>
+          </div>
+          <div id="role-display-container">
+            <label class="block text-sm font-medium text-foreground mb-2">Assigned Role</label>
+            <div class="w-full px-4 py-2 border border-border rounded-lg bg-blue-50 text-blue-700 font-medium">
+              <i class="fas fa-user-md mr-2 text-blue-600"></i>
+              Hospital Medic
+            </div>
+          </div>
+          <div class="flex gap-3 pt-4">
+            <button 
+              type="submit"
+              class="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg transition-all shadow-lg hover:shadow-xl"
+            >
+              <i class="fas fa-save mr-2"></i>
+              Save Medic
+            </button>
+            <button 
+              type="button"
+              id="cancel-medic-btn"
+              class="px-4 py-2 border border-border rounded-lg hover:bg-accent transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { supabase } from '../../../lib/supabase';
+
+    let hospitalData: any = null;
+    let medicsData: any[] = [];
+    let appointmentsData: any[] = [];
+    let patientsData: any[] = [];
+
+    // Custom Toast Notification System
+    type ToastType = 'success' | 'error' | 'warning' | 'info';
+    
+    function showToast(message: string, type: ToastType = 'info', duration: number = 4000) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = 'pointer-events-auto transform translate-x-full transition-all duration-300 ease-out';
+      
+      const icons = {
+        success: { icon: 'fa-check-circle', bgColor: 'bg-green-500', textColor: 'text-green-50' },
+        error: { icon: 'fa-times-circle', bgColor: 'bg-red-500', textColor: 'text-red-50' },
+        warning: { icon: 'fa-exclamation-triangle', bgColor: 'bg-orange-500', textColor: 'text-orange-50' },
+        info: { icon: 'fa-info-circle', bgColor: 'bg-blue-500', textColor: 'text-blue-50' }
+      };
+
+      const config = icons[type];
+      
+      toast.innerHTML = `
+        <div class="flex items-start gap-3 ${config.bgColor} ${config.textColor} px-5 py-4 rounded-xl shadow-2xl min-w-[300px] max-w-md backdrop-blur-sm border border-white/20">
+          <i class="fas ${config.icon} text-xl mt-0.5 flex-shrink-0"></i>
+          <p class="flex-1 font-medium leading-relaxed">${message}</p>
+          <button onclick="this.closest('[class*=translate]').remove()" class="ml-2 hover:opacity-80 transition-opacity flex-shrink-0">
+            <i class="fas fa-times text-sm"></i>
+          </button>
+        </div>
+      `;
+      
+      container.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.classList.remove('translate-x-full');
+        toast.classList.add('translate-x-0');
+      }, 10);
+      
+      setTimeout(() => {
+        toast.classList.add('translate-x-full', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+    }
+
+    // Custom Confirmation Dialog
+    function showConfirm(
+      title: string, 
+      message: string, 
+      options: {
+        type?: 'danger' | 'warning' | 'info',
+        confirmText?: string,
+        cancelText?: string
+      } = {}
+    ): Promise<boolean> {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('confirm-modal');
+        const modalContent = document.getElementById('confirm-modal-content');
+        const iconEl = document.getElementById('confirm-icon');
+        const titleEl = document.getElementById('confirm-title');
+        const messageEl = document.getElementById('confirm-message');
+        const confirmBtn = document.getElementById('confirm-ok-btn');
+        const cancelBtn = document.getElementById('confirm-cancel-btn');
+        
+        if (!modal || !modalContent || !iconEl || !titleEl || !messageEl || !confirmBtn || !cancelBtn) {
+          resolve(false);
+          return;
+        }
+
+        const type = options.type || 'warning';
+        const configs = {
+          danger: { 
+            icon: 'fa-exclamation-triangle', 
+            iconBg: 'bg-red-100 text-red-600',
+            btnBg: 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800'
+          },
+          warning: { 
+            icon: 'fa-exclamation-circle', 
+            iconBg: 'bg-orange-100 text-orange-600',
+            btnBg: 'bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800'
+          },
+          info: { 
+            icon: 'fa-info-circle', 
+            iconBg: 'bg-blue-100 text-blue-600',
+            btnBg: 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'
+          }
+        };
+
+        const config = configs[type];
+        
+        iconEl.className = `flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${config.iconBg}`;
+        iconEl.querySelector('i')!.className = `fas ${config.icon} text-2xl`;
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        confirmBtn.textContent = options.confirmText || 'Confirm';
+        confirmBtn.className = `flex-1 px-4 py-2.5 rounded-lg font-medium text-white transition-all shadow-lg hover:shadow-xl transform hover:scale-105 ${config.btnBg}`;
+        cancelBtn.textContent = options.cancelText || 'Cancel';
+        
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+        
+        setTimeout(() => {
+          modalContent.classList.remove('scale-95', 'opacity-0');
+          modalContent.classList.add('scale-100', 'opacity-100');
+        }, 10);
+        
+        const closeModal = (result: boolean) => {
+          modalContent.classList.add('scale-95', 'opacity-0');
+          modalContent.classList.remove('scale-100', 'opacity-100');
+          
+          setTimeout(() => {
+            modal.style.display = 'none';
+            modal.classList.add('hidden');
+            resolve(result);
+          }, 200);
+        };
+        
+        const handleConfirm = () => {
+          confirmBtn.removeEventListener('click', handleConfirm);
+          cancelBtn.removeEventListener('click', handleCancel);
+          closeModal(true);
+        };
+        
+        const handleCancel = () => {
+          confirmBtn.removeEventListener('click', handleConfirm);
+          cancelBtn.removeEventListener('click', handleCancel);
+          closeModal(false);
+        };
+        
+        confirmBtn.addEventListener('click', handleConfirm);
+        cancelBtn.addEventListener('click', handleCancel);
+      });
+    }
+
+    // Update navbar with user data
+    function updateNavbar(user: any, profile: any) {
+      const avatarElements = document.querySelectorAll('[class*="rounded-full"][class*="bg-gradient"]');
+      const initial = profile?.full_name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'A';
+      avatarElements.forEach(el => {
+        if (el.textContent && el.textContent.trim().length <= 1) {
+          el.textContent = initial;
+        }
+      });
+
+      const dropdownContainer = document.getElementById('user-dropdown');
+      if (dropdownContainer) {
+        const paragraphs = dropdownContainer.querySelectorAll('p');
+        if (paragraphs[0]) paragraphs[0].textContent = profile?.full_name || user.user_metadata?.full_name || 'Admin';
+        if (paragraphs[1]) paragraphs[1].textContent = user.email || '';
+      }
+    }
+
+    async function loadDashboardData() {
+      try {
+        // Check authentication
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        
+        if (authError || !user) {
+          console.error('Not authenticated:', authError);
+          window.location.href = '/auth';
+          return;
+        }
+
+        // Get user profile and verify they're a hospital admin
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*, hospitals(*)')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError || !profile) {
+          console.error('Error fetching profile:', profileError);
+          showToast('Unable to load profile', 'error');
+          window.location.href = '/auth';
+          return;
+        }
+
+        // Verify user is hospital admin
+        if (profile.role !== 'hospital_admin') {
+          showToast('Access denied. This page is for hospital administrators only.', 'error');
+          window.location.href = '/dashboard';
+          return;
+        }
+
+        if (!profile.hospital_id) {
+          showToast('No hospital assigned to your account. Please contact support.', 'error');
+          return;
+        }
+
+        hospitalData = profile.hospitals;
+
+        // Update UI with hospital and user info
+        const hospitalNameEl = document.getElementById('hospital-name');
+        const adminNameEl = document.getElementById('admin-name');
+        
+        if (hospitalNameEl) hospitalNameEl.textContent = hospitalData?.name || 'Hospital';
+        if (adminNameEl) adminNameEl.textContent = profile.full_name || 'Admin';
+
+        updateNavbar(user, profile);
+
+        // Load all data
+        await Promise.all([
+          loadMedics(profile.hospital_id),
+          loadAppointments(profile.hospital_id),
+          loadPatients(profile.hospital_id)
+        ]);
+
+        updateStats();
+
+        // Hide loading, show content
+        const loadingScreen = document.getElementById('loading-screen');
+        const content = document.getElementById('dashboard-content');
+        
+        if (loadingScreen && content) {
+          loadingScreen.classList.add('hidden');
+          content.classList.remove('hidden');
+          setTimeout(() => content.style.opacity = '1', 100);
+        }
+
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+        showToast('Failed to load dashboard. Please try again.', 'error');
+      }
+    }
+
+    async function loadMedics(hospitalId: string) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('hospital_id', hospitalId)
+        .eq('role', 'hospital_medic')
+        .order('full_name');
+
+      if (error) {
+        console.error('Error fetching medics:', error);
+        return;
+      }
+
+      medicsData = data || [];
+      renderMedics();
+      loadDepartments(); // Load unique departments for datalist
+    }
+
+    async function loadDepartments() {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('department')
+          .eq('role', 'hospital_medic')
+          .not('department', 'is', null)
+          .order('department');
+
+        if (error) {
+          console.error('Error loading departments:', error);
+          return;
+        }
+
+        // Get unique departments
+        const uniqueDepts = [...new Set(data?.map(d => d.department).filter(Boolean))];
+        
+        // Populate datalist
+        const datalist = document.getElementById('departments-list');
+        if (datalist) {
+          datalist.innerHTML = uniqueDepts.map(dept => 
+            `<option value="${dept}">${dept}</option>`
+          ).join('');
+        }
+      } catch (error) {
+        console.error('Error loading departments:', error);
+      }
+    }
+
+    async function loadAppointments(hospitalId: string) {
+      // Note: appointments table doesn't exist yet, handle gracefully
+      try {
+        const { data, error } = await supabase
+          .from('appointments')
+          .select('*, patients:profiles!patient_id(*), medics:profiles!medic_id(*)')
+          .eq('hospital_id', hospitalId)
+          .order('appointment_date', { ascending: false })
+          .limit(10);
+
+        if (error) {
+          if (error.code === 'PGRST116') {
+            console.log('Appointments table does not exist yet');
+            appointmentsData = [];
+            renderAppointments();
+            return;
+          }
+          throw error;
+        }
+
+        appointmentsData = data || [];
+        renderAppointments();
+      } catch (error) {
+        console.error('Error loading appointments:', error);
+        appointmentsData = [];
+        renderAppointments();
+      }
+    }
+
+    async function loadPatients(hospitalId: string) {
+      // Get unique patients from appointments or profiles
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'patient');
+
+        if (error) throw error;
+        patientsData = data || [];
+      } catch (error) {
+        console.error('Error loading patients:', error);
+        patientsData = [];
+      }
+    }
+
+    function updateStats() {
+      const statsGrid = document.getElementById('stats-grid');
+      if (!statsGrid) return;
+
+      const statCards = statsGrid.querySelectorAll('.stats-card');
+      
+      // Total Patients
+      if (statCards[0]) {
+        const valueEl = statCards[0].querySelector('.text-3xl');
+        if (valueEl) valueEl.textContent = patientsData.length.toString();
+      }
+      
+      // Active Medics
+      if (statCards[1]) {
+        const valueEl = statCards[1].querySelector('.text-3xl');
+        if (valueEl) valueEl.textContent = medicsData.length.toString();
+      }
+      
+      // Today's Appointments
+      if (statCards[2]) {
+        const valueEl = statCards[2].querySelector('.text-3xl');
+        const today = new Date().toISOString().split('T')[0];
+        const todayAppointments = appointmentsData.filter(a => 
+          a.appointment_date?.startsWith(today)
+        ).length;
+        if (valueEl) valueEl.textContent = todayAppointments.toString();
+      }
+      
+      // Total Appointments
+      if (statCards[3]) {
+        const valueEl = statCards[3].querySelector('.text-3xl');
+        if (valueEl) valueEl.textContent = appointmentsData.length.toString();
+      }
+    }
+
+    function renderMedics() {
+      const container = document.getElementById('medics-list');
+      if (!container) return;
+
+      if (medicsData.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 text-muted-foreground">
+            <i class="fas fa-user-md text-5xl mb-4 opacity-50"></i>
+            <p class="text-lg font-medium mb-2">No medics assigned yet</p>
+            <p class="text-sm">Add your first medic to get started</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="space-y-3">
+          ${medicsData.map(medic => `
+            <div class="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-lg">
+                  ${medic.full_name?.charAt(0).toUpperCase() || medic.email?.charAt(0).toUpperCase() || 'M'}
+                </div>
+                <div>
+                  <p class="font-semibold text-foreground">${medic.full_name || 'No name'}</p>
+                  <p class="text-sm text-muted-foreground">${medic.email}</p>
+                  ${medic.department ? `
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 mt-1">
+                      <i class="fas fa-stethoscope mr-1"></i>
+                      ${medic.department}
+                    </span>
+                  ` : ''}
+                  ${medic.cnp ? `<p class="text-xs text-muted-foreground mt-1">CNP: ${medic.cnp}</p>` : ''}
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button 
+                  class="edit-medic-btn px-3 py-2 text-sm border border-border rounded-lg hover:bg-accent transition-colors"
+                  data-medic-id="${medic.id}"
+                  title="Edit medic details"
+                >
+                  <i class="fas fa-edit mr-1"></i>
+                  Edit
+                </button>
+                <button 
+                  class="remove-medic-btn px-3 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                  data-medic-id="${medic.id}"
+                  title="Remove from hospital"
+                >
+                  <i class="fas fa-user-minus mr-1"></i>
+                  Remove
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      // Attach event listeners
+      document.querySelectorAll('.edit-medic-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = (e.currentTarget as HTMLElement).dataset.medicId;
+          const medic = medicsData.find(m => m.id === id);
+          if (medic) openMedicModal(medic);
+        });
+      });
+
+      document.querySelectorAll('.remove-medic-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = (e.currentTarget as HTMLElement).dataset.medicId;
+          removeMedic(id!);
+        });
+      });
+    }
+
+    function renderAppointments() {
+      const container = document.getElementById('appointments-list');
+      if (!container) return;
+
+      if (appointmentsData.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 text-muted-foreground">
+            <i class="fas fa-calendar-alt text-5xl mb-4 opacity-50"></i>
+            <p class="text-lg font-medium mb-2">No appointments scheduled</p>
+            <p class="text-sm">Appointments will appear here once scheduled</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="space-y-3">
+          ${appointmentsData.map(apt => `
+            <div class="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors">
+              <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                  <i class="fas fa-calendar"></i>
+                </div>
+                <div>
+                  <p class="font-semibold text-foreground">${apt.patients?.full_name || 'Patient'}</p>
+                  <p class="text-sm text-muted-foreground">
+                    with Dr. ${apt.medics?.full_name || 'Unknown'}
+                  </p>
+                  <p class="text-xs text-muted-foreground mt-1">
+                    <i class="fas fa-clock mr-1"></i>
+                    ${new Date(apt.appointment_date).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="px-3 py-1 rounded-full text-xs font-medium ${
+                  apt.status === 'completed' ? 'bg-green-100 text-green-700' :
+                  apt.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                  'bg-blue-100 text-blue-700'
+                }">
+                  ${apt.status || 'scheduled'}
+                </span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    // Medic search cache
+    let medicSearchCache: Record<string, any[]> = {};
+    let medicSearchDebounceTimer: number | null = null;
+
+    function openMedicModal(medic?: any) {
+      const modal = document.getElementById('medic-modal');
+      const modalContent = document.getElementById('medic-modal-content');
+      const title = document.getElementById('medic-modal-title');
+      const form = document.getElementById('medic-form') as HTMLFormElement;
+      const searchSection = document.getElementById('medic-search-section');
+      const searchResultsDropdown = document.getElementById('medic-search-results-dropdown');
+      
+      if (!modal || !modalContent || !title || !form) return;
+
+      if (medic) {
+        // Editing existing medic
+        title.textContent = 'Edit Medic';
+        searchSection?.classList.add('hidden');
+        form.classList.remove('hidden');
+        
+        (document.getElementById('medic-id') as HTMLInputElement).value = medic.id;
+        (document.getElementById('medic-email') as HTMLInputElement).value = medic.email;
+        (document.getElementById('medic-fullname') as HTMLInputElement).value = medic.full_name || '';
+        (document.getElementById('medic-specialization') as HTMLInputElement).value = medic.department || '';
+      } else {
+        // Adding new medic
+        title.textContent = 'Add Medic to Hospital';
+        searchSection?.classList.remove('hidden');
+        form.classList.add('hidden');
+        form.reset();
+        
+        if (searchResultsDropdown) {
+          searchResultsDropdown.innerHTML = '';
+          searchResultsDropdown.classList.add('hidden');
+        }
+        (document.getElementById('medic-email-search') as HTMLInputElement).value = '';
+        (document.getElementById('medic-id') as HTMLInputElement).value = '';
+      }
+
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+      
+      setTimeout(() => {
+        modalContent.classList.remove('scale-95', 'opacity-0');
+        modalContent.classList.add('scale-100', 'opacity-100');
+      }, 10);
+    }
+
+    function closeMedicModal() {
+      const modal = document.getElementById('medic-modal');
+      const modalContent = document.getElementById('medic-modal-content');
+      
+      if (modal && modalContent) {
+        modalContent.classList.add('scale-95', 'opacity-0');
+        modalContent.classList.remove('scale-100', 'opacity-100');
+        
+        setTimeout(() => {
+          modal.classList.add('hidden');
+          modal.style.display = 'none';
+        }, 200);
+      }
+    }
+
+    async function liveMedicSearch(query: string) {
+      const dropdown = document.getElementById('medic-search-results-dropdown');
+      const spinner = document.getElementById('medic-search-spinner');
+      
+      if (!dropdown || !spinner) return;
+
+      if (query.length < 2) {
+        dropdown.classList.add('hidden');
+        dropdown.innerHTML = '';
+        return;
+      }
+
+      const cacheKey = query.toLowerCase();
+      if (medicSearchCache[cacheKey]) {
+        displayMedicSearchResults(medicSearchCache[cacheKey], dropdown);
+        return;
+      }
+
+      spinner.classList.remove('hidden');
+
+      try {
+        const { data: profiles, error } = await supabase
+          .from('profiles')
+          .select('id, email, full_name, role, hospital_id')
+          .ilike('email', `%${query}%`)
+          .limit(10);
+
+        spinner.classList.add('hidden');
+
+        if (error) {
+          console.error('Error searching users:', error);
+          dropdown.innerHTML = '<div class="p-3 text-sm text-red-600">Error searching users</div>';
+          dropdown.classList.remove('hidden');
+          return;
+        }
+
+        medicSearchCache[cacheKey] = profiles || [];
+        displayMedicSearchResults(profiles || [], dropdown);
+
+      } catch (error) {
+        console.error('Error in live search:', error);
+        spinner.classList.add('hidden');
+        dropdown.innerHTML = '<div class="p-3 text-sm text-red-600">Search failed</div>';
+        dropdown.classList.remove('hidden');
+      }
+    }
+
+    function displayMedicSearchResults(profiles: any[], dropdown: HTMLElement) {
+      if (profiles.length === 0) {
+        dropdown.innerHTML = '<div class="p-3 text-sm text-gray-500">No users found</div>';
+        dropdown.classList.remove('hidden');
+        return;
+      }
+
+      // Filter out users who already have roles other than patient
+      const availableProfiles = profiles.filter(p => p.role === 'patient');
+
+      if (availableProfiles.length === 0) {
+        dropdown.innerHTML = '<div class="p-3 text-sm text-yellow-600">No eligible users found. Only patients can be assigned as medics.</div>';
+        dropdown.classList.remove('hidden');
+        return;
+      }
+
+      dropdown.innerHTML = availableProfiles.map(profile => `
+        <div 
+          class="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+          data-user-id="${profile.id}"
+          data-user-email="${profile.email}"
+          data-user-name="${profile.full_name || ''}"
+          data-user-role="${profile.role}"
+          onclick="selectMedicFromSearch(this)"
+        >
+          <div class="flex items-start justify-between">
+            <div class="flex-1">
+              <p class="text-sm font-medium text-gray-900">${profile.email}</p>
+              ${profile.full_name ? `<p class="text-xs text-gray-500 mt-0.5">${profile.full_name}</p>` : ''}
+              <p class="text-xs text-gray-400 mt-0.5">
+                <i class="fas fa-user-tag mr-1"></i>Current role: ${getRoleDisplayName(profile.role)}
+              </p>
+            </div>
+            <i class="fas fa-chevron-right text-gray-400 text-xs mt-1"></i>
+          </div>
+        </div>
+      `).join('');
+      
+      dropdown.classList.remove('hidden');
+    }
+
+    function selectMedicFromSearch(element: HTMLElement) {
+      const userId = element.dataset.userId;
+      const email = element.dataset.userEmail;
+      const fullName = element.dataset.userName;
+
+      (document.getElementById('medic-id') as HTMLInputElement).value = userId || '';
+      (document.getElementById('medic-email') as HTMLInputElement).value = email || '';
+      (document.getElementById('medic-fullname') as HTMLInputElement).value = fullName || '';
+      
+      const searchSection = document.getElementById('medic-search-section');
+      const form = document.getElementById('medic-form');
+      const dropdown = document.getElementById('medic-search-results-dropdown');
+      
+      searchSection?.classList.add('hidden');
+      form?.classList.remove('hidden');
+      dropdown?.classList.add('hidden');
+    }
+
+    (window as any).selectMedicFromSearch = selectMedicFromSearch;
+
+    function getRoleDisplayName(role: string): string {
+      const roleMap: Record<string, string> = {
+        'mediconnect_admin': 'Site Admin',
+        'hospital_admin': 'Hospital Admin',
+        'hospital_medic': 'Hospital Medic',
+        'patient': 'Patient'
+      };
+      return roleMap[role] || role;
+    }
+
+    async function saveMedic(e: Event) {
+      e.preventDefault();
+      
+      if (!hospitalData?.id) {
+        showToast('Hospital information not available', 'error');
+        return;
+      }
+
+      const userId = (document.getElementById('medic-id') as HTMLInputElement).value;
+      const fullName = (document.getElementById('medic-fullname') as HTMLInputElement).value;
+      const specialization = (document.getElementById('medic-specialization') as HTMLInputElement).value.trim();
+
+      if (!userId) {
+        showToast('No user selected. Please search for a user first.', 'error');
+        return;
+      }
+
+      if (!specialization) {
+        showToast('Please select a medical department/specialization.', 'warning');
+        return;
+      }
+
+      // Disable form during submission
+      const submitBtn = document.querySelector('#medic-form button[type="submit"]') as HTMLButtonElement;
+      const originalBtnContent = submitBtn?.innerHTML;
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
+      }
+
+      try {
+        const updateData: any = {
+          full_name: fullName,
+          role: 'hospital_medic',
+          hospital_id: hospitalData.id,
+          department: specialization
+        };
+
+        console.log('Saving medic with data:', updateData);
+
+        const { data, error } = await supabase
+          .from('profiles')
+          .update(updateData)
+          .eq('id', userId)
+          .select();
+
+        if (error) {
+          console.error('Supabase error:', error);
+          if (error.code === '42501') {
+            throw new Error('Permission denied. You need administrator privileges.');
+          }
+          throw error;
+        }
+
+        console.log('Update successful:', data);
+        showToast('Medic added to hospital successfully!', 'success');
+        closeMedicModal();
+        
+        // Clear the form
+        const form = document.getElementById('medic-form') as HTMLFormElement;
+        form?.reset();
+        (document.getElementById('medic-id') as HTMLInputElement).value = '';
+        
+        await loadMedics(hospitalData.id);
+        updateStats();
+      } catch (error: any) {
+        console.error('Error saving medic:', error);
+        showToast(error.message || 'Failed to save medic. Please try again.', 'error');
+      } finally {
+        // Re-enable form
+        if (submitBtn && originalBtnContent) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnContent;
+        }
+      }
+    }
+
+    async function removeMedic(id: string) {
+      const medic = medicsData.find(m => m.id === id);
+      if (!medic) return;
+
+      const confirmed = await showConfirm(
+        'Remove Medic from Hospital?',
+        `Remove ${medic.full_name || medic.email} from the hospital?\n\nThey will be changed to patient role.`,
+        { type: 'warning', confirmText: 'Remove', cancelText: 'Cancel' }
+      );
+      
+      if (!confirmed) return;
+
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            role: 'patient',
+            hospital_id: null
+          })
+          .eq('id', id);
+
+        if (error) {
+          if (error.code === '42501') {
+            throw new Error('Permission denied.');
+          }
+          throw error;
+        }
+
+        showToast('Medic removed from hospital successfully!', 'success');
+        
+        if (hospitalData?.id) {
+          await loadMedics(hospitalData.id);
+          updateStats();
+        }
+      } catch (error: any) {
+        console.error('Error removing medic:', error);
+        showToast(error.message || 'Failed to remove medic.', 'error');
+      }
+    }
+
+    // Event listeners
+    document.getElementById('add-medic-btn')?.addEventListener('click', () => openMedicModal());
+    document.getElementById('close-medic-modal')?.addEventListener('click', closeMedicModal);
+    document.getElementById('cancel-medic-btn')?.addEventListener('click', closeMedicModal);
+    document.getElementById('medic-form')?.addEventListener('submit', saveMedic);
+
+    // Live search
+    const medicSearchInput = document.getElementById('medic-email-search') as HTMLInputElement;
+    medicSearchInput?.addEventListener('input', (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      const query = target.value.trim();
+      
+      if (medicSearchDebounceTimer) {
+        clearTimeout(medicSearchDebounceTimer);
+      }
+      
+      medicSearchDebounceTimer = window.setTimeout(() => {
+        liveMedicSearch(query);
+      }, 300);
+    });
+
+    // Click outside dropdown
+    document.addEventListener('click', (e: Event) => {
+      const dropdown = document.getElementById('medic-search-results-dropdown');
+      const searchInput = document.getElementById('medic-email-search');
+      const target = e.target as HTMLElement;
+      
+      if (dropdown && !dropdown.contains(target) && target !== searchInput) {
+        dropdown.classList.add('hidden');
+      }
+    });
+
+    // Load dashboard
+    loadDashboardData();
+  </script>
+
+  <style>
+    @keyframes progress {
+      0% { width: 0%; }
+      100% { width: 100%; }
+    }
+
+    @keyframes scaleIn {
+      from {
+        transform: scale(0.95);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .animate-progress {
+      animation: progress 1.5s ease-in-out infinite;
+    }
+
+    #dashboard-content {
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+    }
+
+    #loading-screen {
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    #stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+
+    @media (min-width: 1024px) {
+      #stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    /* Toast animations */
+    #toast-container > div {
+      animation: slideInRight 0.3s ease-out forwards;
+    }
+
+    /* Modal animations */
+    #confirm-modal,
+    #medic-modal {
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    #confirm-modal-content,
+    #medic-modal-content {
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), 
+                  opacity 0.2s ease-out;
+    }
+
+    /* Button animations */
+    .edit-medic-btn,
+    .remove-medic-btn {
+      animation: scaleIn 0.3s ease-out backwards;
+      transition: all 0.2s ease;
+    }
+
+    .edit-medic-btn {
+      animation-delay: 0.05s;
+    }
+
+    .remove-medic-btn {
+      animation-delay: 0.1s;
+    }
+
+    .edit-medic-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .remove-medic-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+  </style>
+</MainLayout>
