@@ -1,0 +1,388 @@
+---
+import MainLayout from '../layouts/main.astro';
+---
+
+<MainLayout content={{ title: 'Sign In - MediConnect' }}>
+  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
+    <div class="w-full max-w-md">
+      <!-- Card Container -->
+      <div class="bg-card border-2 border-border rounded-lg shadow-2xl overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-primary/10 to-secondary/10 p-8 text-center">
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/20 mb-4">
+            <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          </div>
+          <h1 class="text-3xl font-bold text-foreground mb-2">MediConnect</h1>
+          <p class="text-muted-foreground">Sign in to your account</p>
+        </div>
+
+        <!-- Form Container -->
+        <div class="p-8">
+          <form id="auth-form" class="space-y-6">
+            <!-- Step 1: Email -->
+            <div id="step-email" class="space-y-4">
+              <div class="space-y-2">
+                <label for="email" class="block text-sm font-medium text-foreground">
+                  Email address
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  required
+                  autocomplete="email"
+                  class="w-full px-4 py-3 bg-background border-2 border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                  placeholder="you@example.com"
+                />
+              </div>
+
+              <button
+                type="button"
+                id="email-next-btn"
+                class="w-full bg-primary text-primary-foreground py-3 rounded-md font-semibold hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-200 transform hover:scale-[1.02]"
+              >
+                Next
+              </button>
+            </div>
+
+            <!-- Step 2: Password -->
+            <div id="step-password" class="space-y-4 hidden">
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <label for="password" class="block text-sm font-medium text-foreground">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    id="back-btn"
+                    class="text-sm text-primary hover:text-primary/80 transition-colors"
+                  >
+                    ← Back
+                  </button>
+                </div>
+                <div class="text-sm text-muted-foreground mb-2" id="email-display"></div>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  required
+                  autocomplete="current-password"
+                  class="w-full px-4 py-3 bg-background border-2 border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                  placeholder="Enter your password"
+                />
+              </div>
+
+              <button
+                type="submit"
+                id="submit-btn"
+                class="w-full bg-primary text-primary-foreground py-3 rounded-md font-semibold hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-200 transform hover:scale-[1.02] flex items-center justify-center gap-2"
+              >
+                <span id="submit-text">Sign In</span>
+                <svg id="loading-spinner" class="hidden animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Error Message -->
+            <div id="error-message" class="hidden p-4 bg-destructive/10 border border-destructive/30 rounded-md">
+              <p class="text-sm text-destructive" id="error-text"></p>
+            </div>
+          </form>
+
+          <!-- Divider -->
+          <div class="relative my-6">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-border"></div>
+            </div>
+            <div class="relative flex justify-center text-sm">
+              <span class="px-4 bg-card text-muted-foreground">Don't have an account?</span>
+            </div>
+          </div>
+
+          <!-- Sign Up Link -->
+          <a
+            href="/signup"
+            class="block w-full text-center py-3 border-2 border-primary text-primary rounded-md font-semibold hover:bg-primary/5 transition-all duration-200 transform hover:scale-[1.02]"
+          >
+            Create Account
+          </a>
+        </div>
+      </div>
+
+      <!-- Additional Info -->
+      <div class="mt-8 text-center text-sm text-muted-foreground">
+        <p>By signing in, you agree to our</p>
+        <div class="mt-2 space-x-4">
+          <a href="/terms" class="text-primary hover:text-primary/80 transition-colors">Terms of Service</a>
+          <span>•</span>
+          <a href="/privacy" class="text-primary hover:text-primary/80 transition-colors">Privacy Policy</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { supabase } from '../lib/supabase';
+
+    const emailInput = document.getElementById('email') as HTMLInputElement;
+    const passwordInput = document.getElementById('password') as HTMLInputElement;
+    const stepEmail = document.getElementById('step-email');
+    const stepPassword = document.getElementById('step-password');
+    const emailNextBtn = document.getElementById('email-next-btn');
+    const backBtn = document.getElementById('back-btn');
+    const submitBtn = document.getElementById('submit-btn');
+    const authForm = document.getElementById('auth-form');
+    const emailDisplay = document.getElementById('email-display');
+    const errorMessage = document.getElementById('error-message');
+    const errorText = document.getElementById('error-text');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const submitText = document.getElementById('submit-text');
+
+    let currentEmail = '';
+
+    // Animate in
+    setTimeout(() => {
+      stepEmail?.classList.add('animate-fade-in');
+    }, 100);
+
+    // Email validation
+    function isValidEmail(email: string): boolean {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    // Show error
+    function showError(message: string) {
+      if (errorText && errorMessage) {
+        errorText.textContent = message;
+        errorMessage.classList.remove('hidden');
+        errorMessage.classList.add('animate-shake');
+        setTimeout(() => {
+          errorMessage.classList.remove('animate-shake');
+        }, 500);
+      }
+    }
+
+    // Hide error
+    function hideError() {
+      errorMessage?.classList.add('hidden');
+    }
+
+    // Go to password step
+    emailNextBtn?.addEventListener('click', () => {
+      const email = emailInput.value.trim();
+
+      if (!email) {
+        showError('Please enter your email address');
+        emailInput.focus();
+        return;
+      }
+
+      if (!isValidEmail(email)) {
+        showError('Please enter a valid email address');
+        emailInput.focus();
+        return;
+      }
+
+      hideError();
+      currentEmail = email;
+
+      // Animate transition
+      stepEmail?.classList.add('animate-slide-out-left');
+      setTimeout(() => {
+        stepEmail?.classList.add('hidden');
+        stepPassword?.classList.remove('hidden');
+        stepPassword?.classList.add('animate-slide-in-right');
+        if (emailDisplay) {
+          emailDisplay.textContent = email;
+        }
+        passwordInput?.focus();
+      }, 300);
+    });
+
+    // Go back to email step
+    backBtn?.addEventListener('click', () => {
+      hideError();
+      stepPassword?.classList.add('animate-slide-out-right');
+      setTimeout(() => {
+        stepPassword?.classList.add('hidden');
+        stepEmail?.classList.remove('hidden');
+        stepEmail?.classList.add('animate-slide-in-left');
+        emailInput?.focus();
+      }, 300);
+    });
+
+    // Handle Enter key on email input
+    emailInput?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        emailNextBtn?.click();
+      }
+    });
+
+    // Form submission
+    authForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const password = passwordInput.value;
+
+      if (!password) {
+        showError('Please enter your password');
+        passwordInput.focus();
+        return;
+      }
+
+      if (password.length < 6) {
+        showError('Password must be at least 6 characters');
+        passwordInput.focus();
+        return;
+      }
+
+      hideError();
+
+      // Show loading state
+      submitBtn?.setAttribute('disabled', 'true');
+      submitText?.classList.add('hidden');
+      loadingSpinner?.classList.remove('hidden');
+
+      try {
+        // Sign in with Supabase
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: currentEmail,
+          password: password,
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        if (data.user) {
+          // Show success
+          if (submitText && loadingSpinner) {
+            submitText.textContent = 'Success!';
+            submitText.classList.remove('hidden');
+            loadingSpinner.classList.add('hidden');
+          }
+
+          // Redirect to dashboard
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 500);
+        }
+      } catch (error: any) {
+        console.error('Sign in error:', error);
+        
+        let errorMsg = 'Invalid email or password';
+        if (error.message) {
+          if (error.message.includes('Invalid login')) {
+            errorMsg = 'Invalid email or password';
+          } else if (error.message.includes('Email not confirmed')) {
+            errorMsg = 'Please verify your email address';
+          } else {
+            errorMsg = error.message;
+          }
+        }
+        
+        showError(errorMsg);
+        
+        // Reset button state
+        submitBtn?.removeAttribute('disabled');
+        submitText?.classList.remove('hidden');
+        loadingSpinner?.classList.add('hidden');
+        if (submitText) {
+          submitText.textContent = 'Sign In';
+        }
+      }
+    });
+  </script>
+
+  <style>
+    @keyframes fade-in {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slide-out-left {
+      from {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      to {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+    }
+
+    @keyframes slide-in-right {
+      from {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes slide-out-right {
+      from {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      to {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+    }
+
+    @keyframes slide-in-left {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    .animate-fade-in {
+      animation: fade-in 0.5s ease-out forwards;
+    }
+
+    .animate-slide-out-left {
+      animation: slide-out-left 0.3s ease-out forwards;
+    }
+
+    .animate-slide-in-right {
+      animation: slide-in-right 0.3s ease-out forwards;
+    }
+
+    .animate-slide-out-right {
+      animation: slide-out-right 0.3s ease-out forwards;
+    }
+
+    .animate-slide-in-left {
+      animation: slide-in-left 0.3s ease-out forwards;
+    }
+
+    .animate-shake {
+      animation: shake 0.5s ease-out;
+    }
+  </style>
+</MainLayout>

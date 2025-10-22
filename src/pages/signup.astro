@@ -1,0 +1,328 @@
+---
+import MainLayout from '../layouts/main.astro';
+---
+
+<MainLayout content={{ title: 'Sign Up - MediConnect' }}>
+  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4 py-12">
+    <div class="w-full max-w-md">
+      <!-- Card Container -->
+      <div class="bg-card border-2 border-border rounded-lg shadow-2xl overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-primary/10 to-secondary/10 p-8 text-center">
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/20 mb-4">
+            <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          </div>
+          <h1 class="text-3xl font-bold text-foreground mb-2">Create Account</h1>
+          <p class="text-muted-foreground">Register as a Patient</p>
+        </div>
+
+        <!-- Form Container -->
+        <div class="p-8">
+          <form id="signup-form" class="space-y-6">
+            <div class="space-y-4">
+              <div class="space-y-2">
+                <label for="full-name" class="block text-sm font-medium text-foreground">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  id="full-name"
+                  name="full-name"
+                  required
+                  class="w-full px-4 py-3 bg-background border-2 border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                  placeholder="John Doe"
+                />
+              </div>
+
+              <div class="space-y-2">
+                <label for="cnp" class="block text-sm font-medium text-foreground">
+                  CNP (Romanian ID)
+                </label>
+                <input
+                  type="text"
+                  id="cnp"
+                  name="cnp"
+                  required
+                  maxlength="13"
+                  pattern="[0-9]{13}"
+                  class="w-full px-4 py-3 bg-background border-2 border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 font-mono"
+                  placeholder="1234567890123"
+                />
+                <p class="text-xs text-muted-foreground">13-digit Romanian Personal Identification Number</p>
+              </div>
+
+              <div class="space-y-2">
+                <label for="signup-email" class="block text-sm font-medium text-foreground">
+                  Email address
+                </label>
+                <input
+                  type="email"
+                  id="signup-email"
+                  name="email"
+                  required
+                  autocomplete="email"
+                  class="w-full px-4 py-3 bg-background border-2 border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                  placeholder="you@example.com"
+                />
+              </div>
+
+              <div class="space-y-2">
+                <label for="signup-password" class="block text-sm font-medium text-foreground">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  id="signup-password"
+                  name="password"
+                  required
+                  autocomplete="new-password"
+                  class="w-full px-4 py-3 bg-background border-2 border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                  placeholder="At least 6 characters"
+                />
+              </div>
+
+              <div class="space-y-2">
+                <label for="confirm-password" class="block text-sm font-medium text-foreground">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  id="confirm-password"
+                  name="confirm-password"
+                  required
+                  autocomplete="new-password"
+                  class="w-full px-4 py-3 bg-background border-2 border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                  placeholder="Repeat your password"
+                />
+              </div>
+
+              <button
+                type="submit"
+                id="signup-submit-btn"
+                class="w-full bg-primary text-primary-foreground py-3 rounded-md font-semibold hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-200 transform hover:scale-[1.02] flex items-center justify-center gap-2 mt-6"
+              >
+                <span id="signup-submit-text">Create Account</span>
+                <svg id="signup-loading-spinner" class="hidden animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Error Message -->
+            <div id="signup-error-message" class="hidden p-4 bg-destructive/10 border border-destructive/30 rounded-md">
+              <p class="text-sm text-destructive" id="signup-error-text"></p>
+            </div>
+          </form>
+
+          <!-- Sign In Link -->
+          <div class="relative my-6">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-border"></div>
+            </div>
+            <div class="relative flex justify-center text-sm">
+              <span class="px-4 bg-card text-muted-foreground">Already have an account?</span>
+            </div>
+          </div>
+
+          <a
+            href="/auth"
+            class="block w-full text-center py-3 border-2 border-primary text-primary rounded-md font-semibold hover:bg-primary/5 transition-all duration-200 transform hover:scale-[1.02]"
+          >
+            Sign In
+          </a>
+        </div>
+      </div>
+
+      <!-- Additional Info -->
+      <div class="mt-8 text-center text-sm text-muted-foreground">
+        <p>Healthcare staff registration is managed by administrators</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { supabase } from '../lib/supabase';
+
+    const signupForm = document.getElementById('signup-form');
+    const errorMessage = document.getElementById('signup-error-message');
+    const errorText = document.getElementById('signup-error-text');
+    const submitBtn = document.getElementById('signup-submit-btn') as HTMLButtonElement;
+    const submitText = document.getElementById('signup-submit-text');
+    const loadingSpinner = document.getElementById('signup-loading-spinner');
+
+    // Show error
+    function showError(message: string) {
+      if (errorText && errorMessage) {
+        errorText.textContent = message;
+        errorMessage.classList.remove('hidden');
+        errorMessage.classList.add('animate-shake');
+        setTimeout(() => {
+          errorMessage.classList.remove('animate-shake');
+        }, 500);
+      }
+    }
+
+    // Hide error
+    function hideError() {
+      errorMessage?.classList.add('hidden');
+    }
+
+    // Validate CNP
+    function isValidCNP(cnp: string): boolean {
+      if (!/^[0-9]{13}$/.test(cnp)) {
+        return false;
+      }
+
+      // Basic CNP validation - check first digit (sex and century)
+      const firstDigit = parseInt(cnp[0]);
+      if (firstDigit < 1 || firstDigit > 8) {
+        return false;
+      }
+
+      // Check if month is valid (01-12)
+      const month = parseInt(cnp.substring(3, 5));
+      if (month < 1 || month > 12) {
+        return false;
+      }
+
+      // Check if day is valid (01-31)
+      const day = parseInt(cnp.substring(5, 7));
+      if (day < 1 || day > 31) {
+        return false;
+      }
+
+      return true;
+    }
+
+    // Form submission
+    signupForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const fullName = (document.getElementById('full-name') as HTMLInputElement).value.trim();
+      const cnp = (document.getElementById('cnp') as HTMLInputElement).value.trim();
+      const email = (document.getElementById('signup-email') as HTMLInputElement).value.trim();
+      const password = (document.getElementById('signup-password') as HTMLInputElement).value;
+      const confirmPassword = (document.getElementById('confirm-password') as HTMLInputElement).value;
+
+      // Validation
+      if (!fullName) {
+        showError('Please enter your full name');
+        return;
+      }
+
+      if (!isValidCNP(cnp)) {
+        showError('Please enter a valid 13-digit CNP');
+        return;
+      }
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showError('Please enter a valid email address');
+        return;
+      }
+
+      if (password.length < 6) {
+        showError('Password must be at least 6 characters');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showError('Passwords do not match');
+        return;
+      }
+
+      hideError();
+
+      // Show loading state
+      submitBtn.disabled = true;
+      submitText?.classList.add('hidden');
+      loadingSpinner?.classList.remove('hidden');
+
+      try {
+        // Sign up with Supabase
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+              role: 'patient'
+            }
+          }
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        if (data.user) {
+          // Update profile with CNP
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ cnp })
+            .eq('id', data.user.id);
+
+          if (profileError) {
+            console.error('Error updating profile:', profileError);
+          }
+
+          // Show success
+          if (submitText && loadingSpinner) {
+            submitText.textContent = 'Success!';
+            submitText.classList.remove('hidden');
+            loadingSpinner.classList.add('hidden');
+          }
+
+          // Redirect to dashboard or confirmation page
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 1000);
+        }
+      } catch (error: any) {
+        console.error('Signup error:', error);
+        
+        let errorMsg = 'An error occurred during registration';
+        if (error.message) {
+          if (error.message.includes('already registered')) {
+            errorMsg = 'This email is already registered';
+          } else if (error.message.includes('cnp')) {
+            errorMsg = 'This CNP is already registered';
+          } else {
+            errorMsg = error.message;
+          }
+        }
+        
+        showError(errorMsg);
+        
+        // Reset button state
+        submitBtn.disabled = false;
+        submitText?.classList.remove('hidden');
+        loadingSpinner?.classList.add('hidden');
+        if (submitText) {
+          submitText.textContent = 'Create Account';
+        }
+      }
+    });
+
+    // Format CNP input to only accept digits
+    const cnpInput = document.getElementById('cnp') as HTMLInputElement;
+    cnpInput?.addEventListener('input', (e) => {
+      const target = e.target as HTMLInputElement;
+      target.value = target.value.replace(/[^0-9]/g, '');
+    });
+  </script>
+
+  <style>
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    .animate-shake {
+      animation: shake 0.5s ease-out;
+    }
+  </style>
+</MainLayout>
