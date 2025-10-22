@@ -2,7 +2,7 @@
 import MainLayout from '../../../layouts/main.astro';
 import Navbar from '../../../components/Navbar.astro';
 import StatsCard from '../../../components/dashboard/StatsCard.astro';
-import HospitalsList from '../../../components/admin/HospitalsList.astro';
+import CollapsibleHospitalsList from '../../../components/admin/CollapsibleHospitalsList.astro';
 import UsersList from '../../../components/admin/UsersList.astro';
 
 // Pass placeholder user for navbar (will be updated client-side)
@@ -106,7 +106,7 @@ const placeholderUser = { email: 'loading@example.com' };
         </div>
         <div class="stats-card">
           <StatsCard 
-            label="Hospital Admins" 
+            label="Total Admins" 
             value="0" 
             icon="fas fa-user-shield" 
             color="text-green-500"
@@ -135,28 +135,17 @@ const placeholderUser = { email: 'loading@example.com' };
 
       <!-- Main Content -->
       <div class="space-y-6">
-        <!-- Hospitals Section -->
+        <!-- Hospitals Section with Collapsible Details -->
         <div id="hospitals-section">
-          <HospitalsList />
+          <CollapsibleHospitalsList />
         </div>
 
-        <!-- Admins Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <!-- Hospital Administrators -->
-          <div id="hospital-admins-section">
-            <UsersList 
-              role="hospital_admin"
-              title="Hospital Administrators"
-            />
-          </div>
-
-          <!-- Site Administrators -->
-          <div id="site-admins-section">
-            <UsersList 
-              role="mediconnect_admin"
-              title="Site Administrators"
-            />
-          </div>
+        <!-- Site Administrators Section (only show site admins, not hospital admins) -->
+        <div id="site-admins-section">
+          <UsersList 
+            role="mediconnect_admin"
+            title="Site Administrators"
+          />
         </div>
       </div>
     </main>
@@ -533,6 +522,11 @@ const placeholderUser = { email: 'loading@example.com' };
           loadUsers()
         ]);
 
+        // Now render everything after both are loaded
+        renderHospitals();
+        renderUsers();
+        updateHospitalNames();
+
         // Calculate and update stats
         updateStats();
 
@@ -567,7 +561,7 @@ const placeholderUser = { email: 'loading@example.com' };
       }
 
       hospitalsData = data || [];
-      renderHospitals();
+      // Don't render yet - wait for users to load too
     }
 
     async function loadUsers() {
@@ -583,8 +577,7 @@ const placeholderUser = { email: 'loading@example.com' };
       }
 
       usersData = data || [];
-      renderUsers();
-      updateHospitalNames();
+      // Don't render yet - wait for both to load
     }
 
     function updateStats() {
@@ -599,14 +592,14 @@ const placeholderUser = { email: 'loading@example.com' };
         if (valueEl) valueEl.textContent = hospitalsData.length.toString();
       }
       
-      // Hospital Admins
+      // Total Admins (both hospital and site admins)
       if (statCards[1]) {
         const valueEl = statCards[1].querySelector('.text-3xl');
-        const count = usersData.filter(u => u.role === 'hospital_admin').length;
+        const count = usersData.filter(u => u.role === 'hospital_admin' || u.role === 'mediconnect_admin').length;
         if (valueEl) valueEl.textContent = count.toString();
       }
       
-      // Site Admins
+      // Site Admins only
       if (statCards[2]) {
         const valueEl = statCards[2].querySelector('.text-3xl');
         const count = usersData.filter(u => u.role === 'mediconnect_admin').length;
@@ -621,8 +614,8 @@ const placeholderUser = { email: 'loading@example.com' };
       }
     }
 
-    function renderHospitals() {
-      const container = document.getElementById('hospitals-list');
+    async function renderHospitals() {
+      const container = document.getElementById('hospitals-collapsible-list');
       if (!container) return;
 
       if (hospitalsData.length === 0) {
@@ -636,47 +629,85 @@ const placeholderUser = { email: 'loading@example.com' };
         return;
       }
 
-      container.innerHTML = `
-        <div class="space-y-4">
-          ${hospitalsData.map(hospital => `
-            <div class="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors">
-              <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <i class="fas fa-hospital text-primary text-xl"></i>
+      const hospitalsHtml = await Promise.all(hospitalsData.map(async hospital => {
+        const admins = usersData.filter(u => u.hospital_id === hospital.id && u.role === 'hospital_admin');
+        
+        return `
+          <div class="hospital-item rounded-xl border border-border bg-white overflow-hidden" data-hospital-id="${hospital.id}">
+            <!-- Hospital Header (Always Visible) -->
+            <div class="hospital-header flex items-center justify-between p-5 cursor-pointer hover:bg-accent/30 transition-colors"
+                 onclick="toggleHospital('${hospital.id}')">
+              <div class="flex items-center gap-4 flex-1">
+                <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
+                  <i class="fas fa-hospital text-white text-2xl"></i>
                 </div>
-                <div>
-                  <p class="font-semibold text-foreground">${hospital.name}</p>
-                  <p class="text-sm text-muted-foreground">${hospital.address || 'No address'}</p>
+                <div class="flex-1">
+                  <div class="flex items-center gap-3 mb-1">
+                    <h4 class="font-bold text-lg text-foreground">${hospital.name}</h4>
+                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
+                      ${admins.length} Admin${admins.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <p class="text-sm text-muted-foreground flex items-center gap-2">
+                    <i class="fas fa-map-marker-alt text-xs"></i>
+                    ${hospital.address || 'No address specified'}
+                  </p>
                   ${hospital.phone ? `
-                    <p class="text-xs text-muted-foreground mt-1">
-                      <i class="fas fa-phone text-xs mr-1"></i>
+                    <p class="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                      <i class="fas fa-phone text-xs"></i>
                       ${hospital.phone}
                     </p>
                   ` : ''}
                 </div>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-3">
                 <button 
-                  class="edit-hospital-btn px-3 py-2 text-sm border border-border rounded-lg hover:bg-accent transition-colors"
+                  class="edit-hospital-btn px-4 py-2 text-sm border-2 border-border rounded-lg hover:bg-accent hover:border-primary transition-all"
                   data-hospital-id="${hospital.id}"
+                  onclick="event.stopPropagation();"
+                  title="Edit hospital details"
                 >
-                  <i class="fas fa-edit mr-1"></i>
+                  <i class="fas fa-edit mr-2"></i>
                   Edit
                 </button>
                 <button 
-                  class="delete-hospital-btn px-3 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                  class="delete-hospital-btn px-4 py-2 text-sm text-red-600 border-2 border-red-200 rounded-lg hover:bg-red-50 hover:border-red-400 transition-all"
                   data-hospital-id="${hospital.id}"
+                  onclick="event.stopPropagation();"
+                  title="Delete hospital"
                 >
-                  <i class="fas fa-trash mr-1"></i>
+                  <i class="fas fa-trash mr-2"></i>
                   Delete
                 </button>
+                <div class="expand-icon text-primary ml-2">
+                  <i class="fas fa-chevron-right text-xl"></i>
+                </div>
               </div>
             </div>
-          `).join('')}
-        </div>
-      `;
 
-      // Attach event listeners
+            <!-- Hospital Details (Collapsible) -->
+            <div class="hospital-details" data-hospital-id="${hospital.id}">
+              <div class="px-5 pb-5 space-y-4 border-t border-border bg-gradient-to-b from-accent/20 to-transparent">
+                <!-- Loading State (hidden by default) -->
+                <div class="hospital-loading hidden py-8 text-center">
+                  <div class="inline-flex items-center gap-3 text-muted-foreground">
+                    <i class="fas fa-spinner fa-spin text-2xl text-primary"></i>
+                    <span class="text-sm font-medium">Loading hospital data...</span>
+                  </div>
+                </div>
+
+                <!-- Content Container (will be populated when expanded) -->
+                <div class="hospital-content hidden">
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }));
+
+      container.innerHTML = `<div class="space-y-3">${hospitalsHtml.join('')}</div>`;
+
+      // Attach event listeners for hospital-level buttons only
       document.querySelectorAll('.edit-hospital-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
           const id = (e.currentTarget as HTMLElement).dataset.hospitalId;
@@ -691,6 +722,299 @@ const placeholderUser = { email: 'loading@example.com' };
           deleteHospital(id!);
         });
       });
+    }
+
+    // Toggle hospital expansion
+    async function toggleHospital(hospitalId: string) {
+      const hospitalItem = document.querySelector(`.hospital-item[data-hospital-id="${hospitalId}"]`);
+      const detailsSection = document.querySelector(`.hospital-details[data-hospital-id="${hospitalId}"]`);
+      
+      if (!hospitalItem || !detailsSection) return;
+
+      const isExpanded = hospitalItem.classList.contains('expanded');
+
+      if (isExpanded) {
+        // Collapse
+        hospitalItem.classList.remove('expanded');
+        detailsSection.classList.remove('show');
+      } else {
+        // Expand
+        hospitalItem.classList.add('expanded');
+        detailsSection.classList.add('show');
+        
+        // Load hospital data if not already loaded
+        if (!detailsSection.classList.contains('data-loaded')) {
+          await loadHospitalData(hospitalId);
+          detailsSection.classList.add('data-loaded');
+        }
+      }
+    }
+
+    // Make toggleHospital available globally
+    (window as any).toggleHospital = toggleHospital;
+
+    async function loadHospitalData(hospitalId: string) {
+      const detailsSection = document.querySelector(`.hospital-details[data-hospital-id="${hospitalId}"]`);
+      if (!detailsSection) return;
+
+      const loadingEl = detailsSection.querySelector('.hospital-loading');
+      const contentEl = detailsSection.querySelector('.hospital-content');
+
+      // Show loading state
+      if (loadingEl) loadingEl.classList.remove('hidden');
+      if (contentEl) contentEl.classList.add('hidden');
+
+      try {
+        // Get admins for this hospital
+        const admins = usersData.filter(u => u.hospital_id === hospitalId && u.role === 'hospital_admin');
+
+        // Fetch appointments for this hospital - simplified query without joins
+        const { data: appointments, error } = await supabase
+          .from('appointments')
+          .select('*')
+          .eq('hospital_id', hospitalId)
+          .order('appointment_date', { ascending: false })
+          .limit(10);
+
+        if (error) {
+          console.error('Error fetching appointments:', error);
+        }
+
+        const appointmentsList = appointments || [];
+        
+        // Update stats
+        const totalCount = appointmentsList.length;
+        const pendingCount = appointmentsList.filter(a => a.status === 'pending').length;
+        const confirmedCount = appointmentsList.filter(a => a.status === 'confirmed').length;
+        const completedCount = appointmentsList.filter(a => a.status === 'completed').length;
+
+        // Generate the content HTML
+        const contentHtml = `
+          <!-- Stats Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
+            <div class="stat-badge bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-xs font-medium text-green-600 mb-1">Total Appointments</p>
+                  <p class="text-2xl font-bold text-green-700">${totalCount}</p>
+                </div>
+                <i class="fas fa-calendar-check text-3xl text-green-400"></i>
+              </div>
+            </div>
+            <div class="stat-badge bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-xs font-medium text-blue-600 mb-1">Pending</p>
+                  <p class="text-2xl font-bold text-blue-700">${pendingCount}</p>
+                </div>
+                <i class="fas fa-clock text-3xl text-blue-400"></i>
+              </div>
+            </div>
+            <div class="stat-badge bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-xs font-medium text-purple-600 mb-1">Confirmed</p>
+                  <p class="text-2xl font-bold text-purple-700">${confirmedCount}</p>
+                </div>
+                <i class="fas fa-check-circle text-3xl text-purple-400"></i>
+              </div>
+            </div>
+            <div class="stat-badge bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-lg p-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-xs font-medium text-orange-600 mb-1">Completed</p>
+                  <p class="text-2xl font-bold text-orange-700">${completedCount}</p>
+                </div>
+                <i class="fas fa-check-double text-3xl text-orange-400"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hospital Administrators Section -->
+          <div class="mt-5">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-bold text-foreground flex items-center gap-2">
+                <i class="fas fa-user-shield text-primary"></i>
+                Hospital Administrators
+              </h5>
+              <button 
+                class="add-hospital-admin-btn px-3 py-1.5 text-xs bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                data-hospital-id="${hospitalId}"
+                onclick="event.stopPropagation();"
+              >
+                <i class="fas fa-plus mr-1"></i>
+                Add Admin
+              </button>
+            </div>
+            ${admins.length > 0 ? `
+              <div class="space-y-2">
+                ${admins.map(admin => `
+                  <div class="admin-badge flex items-center justify-between p-3 rounded-lg border border-border bg-white hover:shadow-md transition-all">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                        ${admin.full_name?.charAt(0).toUpperCase() || admin.email?.charAt(0).toUpperCase() || 'U'}
+                      </div>
+                      <div>
+                        <p class="font-semibold text-sm text-foreground">${admin.full_name || 'No name'}</p>
+                        <p class="text-xs text-muted-foreground">${admin.email}</p>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <button 
+                        class="edit-admin-btn px-2 py-1 text-xs border border-border rounded hover:bg-accent transition-colors"
+                        data-user-id="${admin.id}"
+                        onclick="event.stopPropagation();"
+                        title="Edit admin"
+                      >
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button 
+                        class="demote-admin-btn px-2 py-1 text-xs text-orange-600 border border-orange-200 rounded hover:bg-orange-50 transition-colors"
+                        data-user-id="${admin.id}"
+                        onclick="event.stopPropagation();"
+                        title="Demote to patient"
+                      >
+                        <i class="fas fa-user-minus"></i>
+                      </button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            ` : `
+              <div class="text-center py-6 text-muted-foreground bg-accent/30 rounded-lg border border-dashed border-border">
+                <i class="fas fa-user-shield text-3xl mb-2 opacity-50"></i>
+                <p class="text-sm">No administrators assigned yet</p>
+              </div>
+            `}
+          </div>
+
+          <!-- Recent Appointments Section -->
+          <div class="mt-5">
+            <h5 class="font-bold text-foreground mb-3 flex items-center gap-2">
+              <i class="fas fa-calendar-alt text-primary"></i>
+              Recent Appointments
+            </h5>
+            ${appointmentsList.length > 0 ? `
+              <div class="bg-white rounded-lg border border-border overflow-hidden">
+                <div class="overflow-x-auto">
+                  <table class="w-full text-sm">
+                    <thead class="bg-accent/50 border-b border-border">
+                      <tr>
+                        <th class="px-4 py-3 text-left font-semibold text-foreground">Date</th>
+                        <th class="px-4 py-3 text-left font-semibold text-foreground">Time</th>
+                        <th class="px-4 py-3 text-left font-semibold text-foreground">Patient ID</th>
+                        <th class="px-4 py-3 text-left font-semibold text-foreground">Specialty</th>
+                        <th class="px-4 py-3 text-left font-semibold text-foreground">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border">
+                      ${appointmentsList.slice(0, 5).map((apt, idx) => {
+                        const statusColors: Record<string, string> = {
+                          'pending': 'bg-yellow-100 text-yellow-700 border-yellow-300',
+                          'confirmed': 'bg-blue-100 text-blue-700 border-blue-300',
+                          'completed': 'bg-green-100 text-green-700 border-green-300',
+                          'cancelled': 'bg-red-100 text-red-700 border-red-300'
+                        };
+                        const statusColor = statusColors[apt.status] || statusColors['pending'];
+                        const appointmentDate = new Date(apt.appointment_date);
+                        const dateStr = appointmentDate.toLocaleDateString();
+                        const timeStr = appointmentDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                        
+                        return `
+                          <tr class="appointment-row hover:bg-accent/30 transition-colors">
+                            <td class="px-4 py-3 text-foreground font-medium">
+                              ${dateStr}
+                            </td>
+                            <td class="px-4 py-3 text-muted-foreground">
+                              ${timeStr}
+                            </td>
+                            <td class="px-4 py-3">
+                              <div>
+                                <p class="font-medium text-foreground text-xs">${apt.patient_id.substring(0, 8)}...</p>
+                              </div>
+                            </td>
+                            <td class="px-4 py-3 text-muted-foreground">
+                              ${apt.specialty || 'General'}
+                            </td>
+                            <td class="px-4 py-3">
+                              <span class="px-2 py-1 text-xs font-medium rounded-full border ${statusColor}">
+                                ${apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
+                              </span>
+                            </td>
+                          </tr>
+                        `;
+                      }).join('')}
+                    </tbody>
+                  </table>
+                </div>
+                ${appointmentsList.length > 5 ? `
+                  <div class="px-4 py-3 bg-accent/20 border-t border-border text-center">
+                    <p class="text-xs text-muted-foreground">
+                      Showing 5 of ${appointmentsList.length} appointments
+                    </p>
+                  </div>
+                ` : ''}
+              </div>
+            ` : `
+              <div class="text-center py-8 text-muted-foreground bg-accent/30 rounded-lg border border-dashed border-border">
+                <i class="fas fa-calendar-times text-4xl mb-3 opacity-50"></i>
+                <p class="text-sm font-medium">No recent appointments</p>
+                <p class="text-xs mt-1">Appointments will appear here once scheduled</p>
+              </div>
+            `}
+          </div>
+        `;
+
+        // Update content
+        if (contentEl) {
+          contentEl.innerHTML = contentHtml;
+        }
+
+        // Attach event listeners for dynamically created buttons
+        document.querySelectorAll('.add-hospital-admin-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const hospitalId = (e.currentTarget as HTMLElement).dataset.hospitalId;
+            openUserModal(undefined, 'hospital_admin');
+            // Pre-select the hospital
+            setTimeout(() => {
+              const hospitalSelect = document.getElementById('user-hospital') as HTMLSelectElement;
+              if (hospitalSelect) {
+                hospitalSelect.value = hospitalId || '';
+              }
+            }, 100);
+          });
+        });
+
+        document.querySelectorAll('.edit-admin-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const userId = (e.currentTarget as HTMLElement).dataset.userId;
+            const user = usersData.find(u => u.id === userId);
+            if (user) openUserModal(user, 'hospital_admin');
+          });
+        });
+
+        document.querySelectorAll('.demote-admin-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const userId = (e.currentTarget as HTMLElement).dataset.userId;
+            demoteUserToPatient(userId!);
+          });
+        });
+
+        // Hide loading, show content
+        if (loadingEl) loadingEl.classList.add('hidden');
+        if (contentEl) contentEl.classList.remove('hidden');
+
+      } catch (error) {
+        console.error('Error loading hospital data:', error);
+        if (loadingEl) {
+          loadingEl.innerHTML = `
+            <div class="text-center py-6 text-red-600">
+              <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+              <p class="text-sm">Failed to load hospital data</p>
+            </div>
+          `;
+        }
+      }
     }
 
     async function demoteUserToPatient(id: string) {
@@ -727,6 +1051,8 @@ const placeholderUser = { email: 'loading@example.com' };
         showToast(`${user.full_name || user.email} has been demoted to Patient role successfully!`, 'success');
         
         await loadUsers();
+        renderUsers();
+        renderHospitals(); // Re-render hospitals to update admin counts
         updateStats();
       } catch (error: any) {
         console.error('Error demoting user:', error);
@@ -745,10 +1071,9 @@ const placeholderUser = { email: 'loading@example.com' };
     }
 
     function renderUsers() {
-      const hospitalAdmins = usersData.filter(u => u.role === 'hospital_admin');
       const siteAdmins = usersData.filter(u => u.role === 'mediconnect_admin');
 
-      renderUserList('hospital-admins-section', hospitalAdmins, 'hospital_admin');
+      // Only render site admins list - hospital admins are now shown under each hospital
       renderUserList('site-admins-section', siteAdmins, 'mediconnect_admin');
     }
 
@@ -1050,6 +1375,7 @@ const placeholderUser = { email: 'loading@example.com' };
 
         closeHospitalModal();
         await loadHospitals();
+        renderHospitals();
         updateStats();
       } catch (error: any) {
         console.error('Error saving hospital:', error);
@@ -1107,6 +1433,8 @@ const placeholderUser = { email: 'loading@example.com' };
         
         closeUserModal();
         await loadUsers();
+        renderUsers();
+        renderHospitals(); // Re-render hospitals to update admin counts
         updateStats();
       } catch (error: any) {
         console.error('Error saving user:', error);
@@ -1143,6 +1471,8 @@ const placeholderUser = { email: 'loading@example.com' };
         
         await loadHospitals();
         await loadUsers(); // Reload users in case any were affected
+        renderHospitals();
+        renderUsers();
         updateStats();
       } catch (error: any) {
         console.error('Error deleting hospital:', error);
@@ -1175,6 +1505,8 @@ const placeholderUser = { email: 'loading@example.com' };
         showToast('User deleted successfully!', 'success');
         
         await loadUsers();
+        renderUsers();
+        renderHospitals(); // Re-render hospitals to update admin counts
         updateStats();
       } catch (error: any) {
         console.error('Error deleting user:', error);
