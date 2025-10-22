@@ -3,7 +3,16 @@ import MainLayout from '../layouts/main.astro';
 ---
 
 <MainLayout content={{ title: 'Sign In - MediConnect' }}>
-  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
+  <!-- Loading Check -->
+  <div id="auth-check" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <div class="text-center">
+      <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <p class="mt-4 text-muted-foreground">Loading...</p>
+    </div>
+  </div>
+
+  <!-- Sign In Form (shown only if not logged in) -->
+  <div id="signin-form" class="hidden min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
     <div class="w-full max-w-md">
       <!-- Card Container -->
       <div class="bg-card border-2 border-border rounded-lg shadow-2xl overflow-hidden">
@@ -127,6 +136,34 @@ import MainLayout from '../layouts/main.astro';
 
   <script>
     import { supabase } from '../lib/supabase';
+
+    // Check if user is already logged in
+    async function checkAuthStatus() {
+      const authCheck = document.getElementById('auth-check');
+      const signinForm = document.getElementById('signin-form');
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          // User is already logged in, redirect to dashboard
+          window.location.href = '/dashboard';
+          return;
+        }
+
+        // User is not logged in, show the sign-in form
+        authCheck?.classList.add('hidden');
+        signinForm?.classList.remove('hidden');
+      } catch (error) {
+        console.error('Auth check error:', error);
+        // Show form on error
+        authCheck?.classList.add('hidden');
+        signinForm?.classList.remove('hidden');
+      }
+    }
+
+    // Run auth check on page load
+    checkAuthStatus();
 
     const emailInput = document.getElementById('email') as HTMLInputElement;
     const passwordInput = document.getElementById('password') as HTMLInputElement;

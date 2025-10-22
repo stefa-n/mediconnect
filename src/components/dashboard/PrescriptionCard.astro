@@ -1,0 +1,86 @@
+---
+interface Props {
+  prescriptions?: any[];
+  delay?: number;
+}
+
+const { prescriptions = [], delay = 0 } = Astro.props;
+---
+
+<div 
+  class="bg-card border border-border rounded-lg shadow-sm opacity-0 animate-fade-in-up"
+  style={`animation-delay: ${delay}ms;`}
+>
+  <div class="p-6 border-b border-border">
+    <div class="flex items-center justify-between">
+      <div>
+        <h3 class="text-xl font-bold text-foreground flex items-center gap-2">
+          <i class="fas fa-pills"></i>
+          Active Prescriptions
+        </h3>
+        <p class="text-sm text-muted-foreground mt-1">Your current medications</p>
+      </div>
+      <button class="px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent transition-colors">
+        View All
+      </button>
+    </div>
+  </div>
+  
+  <div class="p-6 space-y-4" id="prescriptions-container">
+    {prescriptions.length === 0 ? (
+      <div class="text-center py-8 text-muted-foreground">
+        <i class="fas fa-prescription-bottle text-4xl mb-3 opacity-50"></i>
+        <p>No active prescriptions</p>
+      </div>
+    ) : (
+      prescriptions.map((rx) => (
+        <div class="p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors cursor-pointer">
+          <div class="flex items-start justify-between mb-2">
+            <div>
+              <p class="font-semibold text-foreground">{rx.medication_name}</p>
+              <p class="text-sm text-muted-foreground">
+                Prescribed by {rx.doctor?.full_name || 'Dr. Unknown'}
+              </p>
+            </div>
+            <span class={`px-2 py-1 text-xs rounded-full ${
+              rx.status === 'active'
+                ? 'bg-green-500/10 text-green-600 border border-green-500/20'
+                : 'bg-gray-500/10 text-gray-600 border border-gray-500/20'
+            }`}>
+              {rx.status}
+            </span>
+          </div>
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-muted-foreground">
+              {rx.dosage} - {rx.frequency}
+            </span>
+            <span class="text-muted-foreground">
+              {new Date(rx.prescribed_date).toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+              })}
+            </span>
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+</div>
+
+<style>
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.7s ease-out forwards;
+  }
+</style>

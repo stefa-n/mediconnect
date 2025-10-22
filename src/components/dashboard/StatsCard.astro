@@ -1,0 +1,43 @@
+---
+interface Props {
+  label: string;
+  value: string | number;
+  icon: string;
+  color?: string;
+  delay?: number;
+}
+
+const { label, value, icon, color = 'text-blue-500', delay = 0 } = Astro.props;
+---
+
+<div 
+  class="bg-card border border-border rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 opacity-0 animate-fade-in-up p-6"
+  style={`animation-delay: ${delay}ms;`}
+>
+  <div class="flex items-center justify-between">
+    <div>
+      <p class="text-sm text-muted-foreground mb-1">{label}</p>
+      <p class="text-3xl font-bold text-foreground">{value}</p>
+    </div>
+    <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+      <i class={`${icon} text-2xl ${color}`}></i>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.7s ease-out forwards;
+  }
+</style>

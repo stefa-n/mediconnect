@@ -1,0 +1,540 @@
+---
+import MainLayout from '../../layouts/main.astro';
+import Navbar from '../../components/Navbar.astro';
+import StatsCard from '../../components/dashboard/StatsCard.astro';
+import AppointmentCard from '../../components/dashboard/AppointmentCard.astro';
+import PrescriptionCard from '../../components/dashboard/PrescriptionCard.astro';
+import QuickActions from '../../components/dashboard/QuickActions.astro';
+import RecentActivity from '../../components/dashboard/RecentActivity.astro';
+
+// Pass placeholder user for navbar (will be updated client-side)
+const placeholderUser = { email: 'loading@example.com' };
+---
+
+<MainLayout content={{ title: 'Patient Dashboard - MediConnect' }}>
+  <!-- Font Awesome for icons -->
+  <link 
+    rel="stylesheet" 
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
+  />
+  
+  <Navbar user={placeholderUser} />
+  
+  <div class="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <!-- Loading State -->
+    <div id="loading-screen" class="flex items-center justify-center min-h-screen">
+      <div class="relative">
+        <div class="flex flex-col items-center space-y-6">
+          <div class="relative">
+            <div class="absolute inset-0 w-24 h-24 rounded-full bg-primary/20 animate-ping"></div>
+            <div class="absolute inset-2 w-20 h-20 rounded-full bg-primary/30 animate-pulse"></div>
+            <div class="relative w-24 h-24 bg-gradient-to-br from-primary to-blue-600 rounded-full flex items-center justify-center shadow-2xl">
+              <i class="fas fa-heart text-white text-4xl animate-pulse"></i>
+            </div>
+          </div>
+          <div class="text-center">
+            <h2 class="text-2xl font-bold text-foreground mb-2">MediConnect</h2>
+            <p class="text-muted-foreground text-sm mb-4">Loading your dashboard...</p>
+            <div class="w-48 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-primary to-blue-600 rounded-full animate-progress"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard Content -->
+    <main id="dashboard-content" class="hidden container mx-auto px-4 py-8">
+      <!-- Welcome Section -->
+      <div class="mb-8">
+        <h2 class="text-3xl font-bold mb-2 text-foreground">
+          Welcome back, <span id="patient-name">Patient</span>!
+        </h2>
+        <p class="text-muted-foreground flex items-center gap-2">
+          <i class="fas fa-clock"></i>
+          <span id="current-date"></span>
+        </p>
+      </div>
+
+      <!-- Stats Grid - 4 cards in a row -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="stats-grid">
+        <div class="stats-card">
+          <StatsCard 
+            label="Upcoming Appointments" 
+            value="0" 
+            icon="fas fa-calendar-alt" 
+            color="text-blue-500"
+            delay={0}
+          />
+        </div>
+        <div class="stats-card">
+          <StatsCard 
+            label="Active Prescriptions" 
+            value="0" 
+            icon="fas fa-pills" 
+            color="text-green-500"
+            delay={100}
+          />
+        </div>
+        <div class="stats-card">
+          <StatsCard 
+            label="Medical Records" 
+            value="0" 
+            icon="fas fa-file-medical" 
+            color="text-purple-500"
+            delay={200}
+          />
+        </div>
+        <div class="stats-card">
+          <StatsCard 
+            label="Health Score" 
+            value="--" 
+            icon="fas fa-heart" 
+            color="text-red-500"
+            delay={300}
+          />
+        </div>
+      </div>
+
+      <!-- Main Content Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <!-- Appointments (2 columns on large screens) -->
+        <div class="lg:col-span-2">
+          <AppointmentCard delay={400} />
+        </div>
+        
+        <!-- Quick Actions -->
+        <div>
+          <QuickActions delay={500} />
+        </div>
+      </div>
+
+      <!-- Bottom Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Prescriptions -->
+        <PrescriptionCard delay={600} />
+        
+        <!-- Recent Activity -->
+        <RecentActivity delay={700} />
+      </div>
+    </main>
+  </div>
+
+  <script>
+    import { supabase } from '../../lib/supabase';
+    import type { Appointment, Prescription, MedicalRecord } from '../../lib/types';
+
+    // Set current date
+    const dateElement = document.getElementById('current-date');
+    if (dateElement) {
+      const now = new Date();
+      dateElement.textContent = now.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    }
+
+    // Function to update navbar with user data
+    function updateNavbar(user: any, profile: any) {
+      // Update all avatar elements with user's first letter
+      const avatarElements = document.querySelectorAll('[class*="rounded-full"][class*="bg-gradient"]');
+      const initial = profile?.full_name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U';
+      avatarElements.forEach(el => {
+        if (el.textContent && el.textContent.trim().length <= 1) {
+          el.textContent = initial;
+        }
+      });
+
+      // Update dropdown content with full name and email
+      const dropdownContainer = document.getElementById('user-dropdown');
+      if (dropdownContainer) {
+        const paragraphs = dropdownContainer.querySelectorAll('p');
+        if (paragraphs[0]) paragraphs[0].textContent = profile?.full_name || user.user_metadata?.full_name || 'User';
+        if (paragraphs[1]) paragraphs[1].textContent = user.email || '';
+      }
+
+      // Update mobile menu if it exists
+      const mobileMenu = document.getElementById('mobile-menu');
+      if (mobileMenu) {
+        const userInfo = mobileMenu.querySelector('.user-info-mobile');
+        if (userInfo) {
+          userInfo.textContent = profile?.full_name || user.user_metadata?.full_name || 'User';
+        }
+      }
+    }
+
+    async function loadDashboardData() {
+      try {
+        // Check authentication
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        
+        if (authError || !user) {
+          console.error('Not authenticated:', authError);
+          window.location.href = '/auth';
+          return;
+        }
+
+        // Get user profile
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError);
+          // Continue even if profile fetch fails
+        }
+
+        // Update patient name
+        const nameElement = document.getElementById('patient-name');
+        if (nameElement && profile) {
+          nameElement.textContent = profile.full_name || user.email?.split('@')[0] || 'Patient';
+        }
+
+        // Update navbar with user data
+        updateNavbar(user, profile);
+
+        // Fetch all data in parallel for better performance
+        const userId = profile?.id || user.id;
+
+        // Check if tables exist before querying
+        let appointments: any[] = [];
+        let prescriptions: any[] = [];
+        let recordsCount = 0;
+
+        try {
+          const [appointmentsResult, prescriptionsResult, recordsResult] = await Promise.all([
+            // Fetch appointments
+            supabase
+              .from('appointments')
+              .select(`
+                *,
+                doctor:profiles!appointments_doctor_id_fkey(id, full_name)
+              `)
+              .eq('patient_id', userId)
+              .gte('appointment_date', new Date().toISOString().split('T')[0])
+              .order('appointment_date', { ascending: true })
+              .limit(5),
+            
+            // Fetch prescriptions
+            supabase
+              .from('prescriptions')
+              .select(`
+                *,
+                doctor:profiles!prescriptions_doctor_id_fkey(id, full_name)
+              `)
+              .eq('patient_id', userId)
+              .eq('status', 'active')
+              .order('prescribed_date', { ascending: false })
+              .limit(5),
+            
+            // Fetch medical records count
+            supabase
+              .from('medical_records')
+              .select('*', { count: 'exact', head: true })
+              .eq('patient_id', userId)
+          ]);
+
+          appointments = appointmentsResult.data || [];
+          prescriptions = prescriptionsResult.data || [];
+          recordsCount = recordsResult.count || 0;
+
+          if (appointmentsResult.error && appointmentsResult.error.code !== 'PGRST116') {
+            console.error('Error fetching appointments:', appointmentsResult.error);
+          }
+
+          if (prescriptionsResult.error && prescriptionsResult.error.code !== 'PGRST116') {
+            console.error('Error fetching prescriptions:', prescriptionsResult.error);
+          }
+
+          if (recordsResult.error && recordsResult.error.code !== 'PGRST116') {
+            console.error('Error fetching records count:', recordsResult.error);
+          }
+        } catch (error) {
+          console.error('Error fetching data:', error);
+          // Continue with empty data - tables might not exist yet
+        }
+
+        // Update stats
+        updateStats(
+          appointments?.length || 0,
+          prescriptions?.length || 0,
+          recordsCount || 0
+        );
+
+        // Update appointments list
+        if (appointments && appointments.length > 0) {
+          updateAppointments(appointments);
+        }
+
+        // Update prescriptions list
+        if (prescriptions && prescriptions.length > 0) {
+          updatePrescriptions(prescriptions);
+        }
+
+        // Fetch recent activity (appointments + prescriptions as activities)
+        const recentActivities: any[] = [];
+        
+        if (appointments) {
+          appointments.slice(0, 2).forEach((apt: any) => {
+            recentActivities.push({
+              id: apt.id,
+              type: 'appointment',
+              title: `Appointment with ${apt.doctor?.full_name || 'Doctor'}`,
+              created_at: apt.created_at
+            });
+          });
+        }
+
+        if (prescriptions) {
+          prescriptions.slice(0, 2).forEach((rx: any) => {
+            recentActivities.push({
+              id: rx.id,
+              type: 'prescription',
+              title: `New prescription: ${rx.medication_name}`,
+              created_at: rx.created_at
+            });
+          });
+        }
+
+        // Sort by date and update
+        recentActivities.sort((a: any, b: any) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+
+        if (recentActivities.length > 0) {
+          updateRecentActivity(recentActivities.slice(0, 5));
+        }
+
+        // Show dashboard with fade-in effect
+        const loading = document.getElementById('loading-screen');
+        const content = document.getElementById('dashboard-content');
+        
+        if (loading) {
+          loading.style.opacity = '0';
+          setTimeout(() => {
+            loading.classList.add('hidden');
+          }, 300);
+        }
+        if (content) {
+          content.classList.remove('hidden');
+          setTimeout(() => {
+            content.style.opacity = '1';
+          }, 100);
+        }
+
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+        
+        // Show error message
+        const loading = document.getElementById('loading-screen');
+        if (loading) {
+          loading.innerHTML = `
+            <div class="text-center">
+              <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+              <h2 class="text-xl font-bold text-foreground mb-2">Error Loading Dashboard</h2>
+              <p class="text-muted-foreground mb-4">Failed to load dashboard data.</p>
+              <button onclick="location.reload()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">
+                Retry
+              </button>
+            </div>
+          `;
+        }
+      }
+    }
+
+    function updateStats(appointments: number, prescriptions: number, records: number) {
+      // Select the stat card containers
+      const statsGrid = document.getElementById('stats-grid');
+      if (!statsGrid) return;
+
+      const statCards = statsGrid.querySelectorAll('.stats-card');
+      
+      // Update Upcoming Appointments
+      if (statCards[0]) {
+        const valueEl = statCards[0].querySelector('.text-3xl');
+        if (valueEl) valueEl.textContent = appointments.toString();
+      }
+      
+      // Update Active Prescriptions
+      if (statCards[1]) {
+        const valueEl = statCards[1].querySelector('.text-3xl');
+        if (valueEl) valueEl.textContent = prescriptions.toString();
+      }
+      
+      // Update Medical Records
+      if (statCards[2]) {
+        const valueEl = statCards[2].querySelector('.text-3xl');
+        if (valueEl) valueEl.textContent = records.toString();
+      }
+      
+      // Calculate health score (mock calculation based on data)
+      // Base score of 85, add points for having appointments/prescriptions/records
+      let healthScore = 85;
+      if (appointments > 0) healthScore += 5;
+      if (prescriptions > 0 && prescriptions <= 2) healthScore += 5; // Not too many meds
+      if (records > 5) healthScore += 5; // Good medical history
+      
+      healthScore = Math.min(healthScore, 100); // Cap at 100
+      
+      if (statCards[3]) {
+        const valueEl = statCards[3].querySelector('.text-3xl');
+        if (valueEl) valueEl.textContent = `${healthScore}%`;
+      }
+    }
+
+    function updateAppointments(appointments: any[]) {
+      const container = document.getElementById('appointments-container');
+      if (!container) return;
+
+      container.innerHTML = appointments.map((apt) => {
+        const date = new Date(apt.appointment_date);
+        const dateStr = date.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        });
+        
+        const statusClass = apt.status === 'confirmed'
+          ? 'bg-green-500/10 text-green-600'
+          : 'bg-yellow-500/10 text-yellow-600';
+
+        return `
+          <div class="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors cursor-pointer">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                <i class="fas fa-stethoscope text-primary text-xl"></i>
+              </div>
+              <div>
+                <p class="font-semibold text-foreground">${apt.doctor?.full_name || 'Dr. Unknown'}</p>
+                <p class="text-sm text-muted-foreground">${apt.specialty || 'General Practice'}</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="font-medium text-foreground">${dateStr}</p>
+              <p class="text-sm text-muted-foreground">${apt.appointment_time}</p>
+              <span class="inline-block px-2 py-1 mt-1 text-xs rounded-full ${statusClass}">
+                ${apt.status}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updatePrescriptions(prescriptions: any[]) {
+      const container = document.getElementById('prescriptions-container');
+      if (!container) return;
+
+      container.innerHTML = prescriptions.map((rx) => {
+        const date = new Date(rx.prescribed_date);
+        const dateStr = date.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        });
+
+        const statusClass = rx.status === 'active'
+          ? 'bg-green-500/10 text-green-600 border border-green-500/20'
+          : 'bg-gray-500/10 text-gray-600 border border-gray-500/20';
+
+        return `
+          <div class="p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors cursor-pointer">
+            <div class="flex items-start justify-between mb-2">
+              <div>
+                <p class="font-semibold text-foreground">${rx.medication_name}</p>
+                <p class="text-sm text-muted-foreground">Prescribed by ${rx.doctor?.full_name || 'Dr. Unknown'}</p>
+              </div>
+              <span class="px-2 py-1 text-xs rounded-full ${statusClass}">
+                ${rx.status}
+              </span>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-muted-foreground">${rx.dosage} - ${rx.frequency}</span>
+              <span class="text-muted-foreground">${dateStr}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updateRecentActivity(activities: any[]) {
+      const container = document.getElementById('activity-container');
+      if (!container) return;
+
+      container.innerHTML = activities.map((activity) => {
+        const date = new Date(activity.created_at);
+        const now = new Date();
+        const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+        
+        let timeAgo;
+        if (diff < 60) timeAgo = 'Just now';
+        else if (diff < 3600) timeAgo = `${Math.floor(diff / 60)} minutes ago`;
+        else if (diff < 86400) timeAgo = `${Math.floor(diff / 3600)} hours ago`;
+        else if (diff < 604800) timeAgo = `${Math.floor(diff / 86400)} days ago`;
+        else timeAgo = date.toLocaleDateString();
+
+        return `
+          <div class="flex items-start gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
+            <div class="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0"></div>
+            <div class="flex-1">
+              <p class="font-medium text-sm text-foreground">${activity.title}</p>
+              <p class="text-xs text-muted-foreground">${timeAgo}</p>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Load data when page loads
+    loadDashboardData();
+  </script>
+
+  <style>
+    @keyframes progress {
+      0% {
+        width: 0%;
+      }
+      100% {
+        width: 100%;
+      }
+    }
+
+    .animate-progress {
+      animation: progress 1.5s ease-in-out infinite;
+    }
+
+    @keyframes bounce-slow {
+      0%, 100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-10px);
+      }
+    }
+
+    #dashboard-content {
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+    }
+
+    #loading-screen {
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    /* Ensure stats cards are evenly distributed */
+    #stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+
+    @media (min-width: 1024px) {
+      #stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+  </style>
+</MainLayout>

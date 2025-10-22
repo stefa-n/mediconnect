@@ -1,0 +1,69 @@
+---
+interface Props {
+  activities?: any[];
+  delay?: number;
+}
+
+const { activities = [], delay = 0 } = Astro.props;
+---
+
+<div 
+  class="bg-card border border-border rounded-lg shadow-sm opacity-0 animate-fade-in-up"
+  style={`animation-delay: ${delay}ms;`}
+>
+  <div class="p-6 border-b border-border">
+    <h3 class="text-xl font-bold text-foreground flex items-center gap-2">
+      <i class="fas fa-activity"></i>
+      Recent Activity
+    </h3>
+    <p class="text-sm text-muted-foreground mt-1">Your latest health updates</p>
+  </div>
+  
+  <div class="p-6 space-y-4" id="activity-container">
+    {activities.length === 0 ? (
+      <div class="text-center py-8 text-muted-foreground">
+        <i class="fas fa-inbox text-4xl mb-3 opacity-50"></i>
+        <p>No recent activity</p>
+      </div>
+    ) : (
+      activities.map((activity) => (
+        <div class="flex items-start gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
+          <div class="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0"></div>
+          <div class="flex-1">
+            <p class="font-medium text-sm text-foreground">{activity.title}</p>
+            <p class="text-xs text-muted-foreground">
+              {(() => {
+                const date = new Date(activity.created_at);
+                const now = new Date();
+                const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+                
+                if (diff < 60) return 'Just now';
+                if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
+                if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+                if (diff < 604800) return `${Math.floor(diff / 86400)} days ago`;
+                return date.toLocaleDateString();
+              })()}
+            </p>
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+</div>
+
+<style>
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.7s ease-out forwards;
+  }
+</style>

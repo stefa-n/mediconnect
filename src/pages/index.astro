@@ -64,9 +64,10 @@ const features = [
             ecosystem.
           </p>
 
-          <div class="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
+          <!-- CTA Buttons - shown based on auth status -->
+          <div id="cta-logged-out" class="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
             <a
-              href="/auth"
+              href="/signup"
               class="inline-flex items-center justify-center text-lg px-8 py-6 bg-primary text-primary-foreground rounded-md hover:scale-105 transition-transform"
             >
               Get Started
@@ -76,6 +77,15 @@ const features = [
               class="inline-flex items-center justify-center text-lg px-8 py-6 border border-input bg-background rounded-md hover:bg-accent hover:text-accent-foreground"
             >
               Sign In
+            </a>
+          </div>
+
+          <div id="cta-logged-in" class="hidden flex-col sm:flex-row gap-4 justify-center items-center pt-4">
+            <a
+              href="/dashboard"
+              class="inline-flex items-center justify-center text-lg px-8 py-6 bg-primary text-primary-foreground rounded-md hover:scale-105 transition-transform"
+            >
+              Go to Dashboard
             </a>
           </div>
         </div>
@@ -148,4 +158,42 @@ const features = [
       </div>
     </section>
   </div>
+
+  <script>
+    import { supabase } from '../lib/supabase';
+
+    // Check auth status and update CTAs
+    async function updateCTAs() {
+      const ctaLoggedOut = document.getElementById('cta-logged-out');
+      const ctaLoggedIn = document.getElementById('cta-logged-in');
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          // User is logged in
+          ctaLoggedOut?.classList.add('hidden');
+          ctaLoggedIn?.classList.remove('hidden');
+          ctaLoggedIn?.classList.add('flex');
+        } else {
+          // User is logged out
+          ctaLoggedOut?.classList.remove('hidden');
+          ctaLoggedIn?.classList.add('hidden');
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+        // Show logged out CTAs on error
+        ctaLoggedOut?.classList.remove('hidden');
+        ctaLoggedIn?.classList.add('hidden');
+      }
+    }
+
+    // Run on page load
+    updateCTAs();
+
+    // Listen for auth state changes
+    supabase.auth.onAuthStateChange(() => {
+      updateCTAs();
+    });
+  </script>
 </MainLayout>

@@ -1,0 +1,59 @@
+---
+interface Props {
+  delay?: number;
+}
+
+const { delay = 0 } = Astro.props;
+---
+
+<div 
+  class="bg-card border border-border rounded-lg shadow-sm opacity-0 animate-fade-in-up"
+  style={`animation-delay: ${delay}ms;`}
+>
+  <div class="p-6 border-b border-border">
+    <h3 class="text-xl font-bold text-foreground flex items-center gap-2">
+      <i class="fas fa-chart-line"></i>
+      Quick Actions
+    </h3>
+    <p class="text-sm text-muted-foreground mt-1">Fast access to key features</p>
+  </div>
+  
+  <div class="p-6 space-y-3">
+    <button class="w-full px-4 py-3 text-left border border-border rounded-lg hover:bg-accent transition-colors flex items-center gap-3">
+      <i class="fas fa-calendar-plus text-primary"></i>
+      <span class="font-medium">Book Appointment</span>
+    </button>
+    
+    <button class="w-full px-4 py-3 text-left border border-border rounded-lg hover:bg-accent transition-colors flex items-center gap-3">
+      <i class="fas fa-id-card text-primary"></i>
+      <span class="font-medium">View MC Card</span>
+    </button>
+    
+    <button class="w-full px-4 py-3 text-left border border-border rounded-lg hover:bg-accent transition-colors flex items-center gap-3">
+      <i class="fas fa-file-medical text-primary"></i>
+      <span class="font-medium">Medical Records</span>
+    </button>
+    
+    <button class="w-full px-4 py-3 text-left border border-border rounded-lg hover:bg-accent transition-colors flex items-center gap-3">
+      <i class="fas fa-comments text-primary"></i>
+      <span class="font-medium">AI Assistant</span>
+    </button>
+  </div>
+</div>
+
+<style>
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.7s ease-out forwards;
+  }
+</style>

@@ -1,0 +1,243 @@
+---
+interface Props {
+  user?: any;
+  transparent?: boolean;
+}
+
+const { user, transparent = false } = Astro.props;
+---
+
+<!-- Spacer div to prevent content from being hidden under fixed navbar -->
+<div class="h-16"></div>
+
+<nav class={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${transparent ? 'bg-transparent' : 'bg-white/80 backdrop-blur-md border-b border-gray-200/50'}`}>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+      <!-- Logo and Brand -->
+      <div class="flex items-center space-x-8">
+        <a href="/" class="flex items-center space-x-2 group">
+          <div class="relative">
+            <div class="w-10 h-10 bg-gradient-to-br from-primary to-blue-600 rounded-lg flex items-center justify-center transform group-hover:scale-105 transition-transform duration-200 shadow-sm">
+              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </div>
+          </div>
+          <span class="text-xl font-semibold text-gray-900 hidden sm:block">MediConnect</span>
+        </a>
+
+        <!-- Navigation Links (Desktop) -->
+        <div class="hidden md:flex items-center space-x-1">
+          <a href="/" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-150">
+            Home
+          </a>
+          <a href="/dashboard" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-150">
+            Dashboard
+          </a>
+          <a href="#features" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-150">
+            Features
+          </a>
+          <a href="#about" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-150">
+            About
+          </a>
+        </div>
+      </div>
+
+      <!-- Right Side Actions -->
+      <div class="flex items-center space-x-3 relative">
+        {user ? (
+          <!-- User Menu -->
+          <div class="flex items-center space-x-3">
+            <!-- Notifications Button -->
+            <button class="relative p-2 rounded-full text-gray-600 hover:bg-gray-100 transition-colors duration-150" aria-label="Notifications">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+
+            <!-- Apps Button -->
+            <button class="p-2 rounded-full text-gray-600 hover:bg-gray-100 transition-colors duration-150" aria-label="Apps">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+            </button>
+
+            <!-- User Profile Button -->
+            <div class="relative">
+              <button id="user-menu-button" class="flex items-center space-x-2 p-1.5 rounded-full hover:bg-gray-100 transition-colors duration-150" aria-label="User menu">
+                <div class="w-8 h-8 bg-gradient-to-br from-primary to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                  {user.email?.charAt(0).toUpperCase()}
+                </div>
+              </button>
+
+              <!-- User Dropdown Menu -->
+              <div id="user-dropdown" class="hidden absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-50">
+                <!-- User Info Section -->
+                <div class="p-4 bg-gradient-to-br from-primary/5 to-purple-50">
+                  <div class="flex items-center space-x-3">
+                    <div class="w-12 h-12 bg-gradient-to-br from-primary to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-lg">
+                      {user.email?.charAt(0).toUpperCase()}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-semibold text-gray-900 truncate">{user.user_metadata?.full_name || 'User'}</p>
+                      <p class="text-xs text-gray-600 truncate">{user.email}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Menu Items -->
+                <div class="py-2">
+                  <a href="/dashboard" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150">
+                    <svg class="w-5 h-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    Dashboard
+                  </a>
+                  <a href="/profile" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150">
+                    <svg class="w-5 h-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    My Profile
+                  </a>
+                  <a href="/settings" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150">
+                    <svg class="w-5 h-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Settings
+                  </a>
+                </div>
+
+                <!-- Divider -->
+                <div class="border-t border-gray-200"></div>
+
+                <!-- Sign Out -->
+                <div class="py-2">
+                  <button id="signout-btn" class="w-full flex items-center px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <!-- Auth Buttons -->
+          <div class="flex items-center space-x-2">
+            <a href="/auth" class="hidden sm:inline-flex px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+              Sign In
+            </a>
+            <a href="/signup" class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary/90 transition-all duration-150 shadow-sm hover:shadow-md">
+              Get Started
+            </a>
+          </div>
+        )}
+
+        <!-- Mobile Menu Button -->
+        <button id="mobile-menu-button" class="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors duration-150" aria-label="Menu">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path id="menu-icon" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            <path id="close-icon" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Menu -->
+  <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-200">
+    <div class="px-4 py-3 space-y-1">
+      <a href="/" class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-150">
+        Home
+      </a>
+      <a href="/dashboard" class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-150">
+        Dashboard
+      </a>
+      <a href="#features" class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-150">
+        Features
+      </a>
+      <a href="#about" class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-150">
+        About
+      </a>
+      {!user && (
+        <div class="pt-3 border-t border-gray-200 space-y-2">
+          <a href="/auth" class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+            Sign In
+          </a>
+          <a href="/signup" class="block px-3 py-2 rounded-lg text-base font-medium text-white bg-primary hover:bg-primary/90 text-center transition-colors duration-150">
+            Get Started
+          </a>
+        </div>
+      )}
+    </div>
+  </div>
+</nav>
+
+<script>
+  import { supabase } from '../lib/supabase';
+
+  // Mobile menu toggle
+  const mobileMenuButton = document.getElementById('mobile-menu-button');
+  const mobileMenu = document.getElementById('mobile-menu');
+  const menuIcon = document.getElementById('menu-icon');
+  const closeIcon = document.getElementById('close-icon');
+
+  mobileMenuButton?.addEventListener('click', () => {
+    mobileMenu?.classList.toggle('hidden');
+    menuIcon?.classList.toggle('hidden');
+    closeIcon?.classList.toggle('hidden');
+  });
+
+  // User dropdown toggle
+  const userMenuButton = document.getElementById('user-menu-button');
+  const userDropdown = document.getElementById('user-dropdown');
+
+  userMenuButton?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    userDropdown?.classList.toggle('hidden');
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!userDropdown?.contains(e.target as Node) && !userMenuButton?.contains(e.target as Node)) {
+      userDropdown?.classList.add('hidden');
+    }
+  });
+
+  // Sign out handler
+  const signoutBtn = document.getElementById('signout-btn');
+  signoutBtn?.addEventListener('click', async () => {
+    const { error } = await supabase.auth.signOut();
+    if (!error) {
+      window.location.href = '/';
+    }
+  });
+
+  // Close mobile menu when clicking on a link
+  const mobileMenuLinks = mobileMenu?.querySelectorAll('a');
+  mobileMenuLinks?.forEach(link => {
+    link.addEventListener('click', () => {
+      mobileMenu?.classList.add('hidden');
+      menuIcon?.classList.remove('hidden');
+      closeIcon?.classList.add('hidden');
+    });
+  });
+
+  // Add scroll effect
+  let lastScroll = 0;
+  window.addEventListener('scroll', () => {
+    const nav = document.querySelector('nav');
+    const currentScroll = window.pageYOffset;
+
+    if (currentScroll > 10) {
+      nav?.classList.add('shadow-sm');
+    } else {
+      nav?.classList.remove('shadow-sm');
+    }
+
+    lastScroll = currentScroll;
+  });
+</script>

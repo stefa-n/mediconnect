@@ -1,0 +1,85 @@
+---
+interface Props {
+  appointments?: any[];
+  delay?: number;
+}
+
+const { appointments = [], delay = 0 } = Astro.props;
+---
+
+<div 
+  class="bg-card border border-border rounded-lg shadow-sm opacity-0 animate-fade-in-up"
+  style={`animation-delay: ${delay}ms;`}
+>
+  <div class="p-6 border-b border-border">
+    <div class="flex items-center justify-between">
+      <div>
+        <h3 class="text-xl font-bold text-foreground flex items-center gap-2">
+          <i class="fas fa-calendar-alt"></i>
+          Upcoming Appointments
+        </h3>
+        <p class="text-sm text-muted-foreground mt-1">Your scheduled medical appointments</p>
+      </div>
+      <button class="px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent transition-colors">
+        View All
+      </button>
+    </div>
+  </div>
+  
+  <div class="p-6 space-y-4" id="appointments-container">
+    {appointments.length === 0 ? (
+      <div class="text-center py-8 text-muted-foreground">
+        <i class="fas fa-calendar-times text-4xl mb-3 opacity-50"></i>
+        <p>No upcoming appointments</p>
+      </div>
+    ) : (
+      appointments.map((apt) => (
+        <div class="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors cursor-pointer">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+              <i class="fas fa-stethoscope text-primary text-xl"></i>
+            </div>
+            <div>
+              <p class="font-semibold text-foreground">{apt.doctor?.full_name || 'Dr. Unknown'}</p>
+              <p class="text-sm text-muted-foreground">{apt.specialty || 'General Practice'}</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <p class="font-medium text-foreground">
+              {new Date(apt.appointment_date).toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+              })}
+            </p>
+            <p class="text-sm text-muted-foreground">{apt.appointment_time}</p>
+            <span class={`inline-block px-2 py-1 mt-1 text-xs rounded-full ${
+              apt.status === 'confirmed' 
+                ? 'bg-green-500/10 text-green-600' 
+                : 'bg-yellow-500/10 text-yellow-600'
+            }`}>
+              {apt.status}
+            </span>
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+</div>
+
+<style>
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.7s ease-out forwards;
+  }
+</style>

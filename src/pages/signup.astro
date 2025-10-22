@@ -3,7 +3,16 @@ import MainLayout from '../layouts/main.astro';
 ---
 
 <MainLayout content={{ title: 'Sign Up - MediConnect' }}>
-  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4 py-12">
+  <!-- Loading Check -->
+  <div id="auth-check" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <div class="text-center">
+      <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <p class="mt-4 text-muted-foreground">Loading...</p>
+    </div>
+  </div>
+
+  <!-- Sign Up Form (shown only if not logged in) -->
+  <div id="signup-content" class="hidden min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4 py-12">
     <div class="w-full max-w-md">
       <!-- Card Container -->
       <div class="bg-card border-2 border-border rounded-lg shadow-2xl overflow-hidden">
@@ -146,6 +155,34 @@ import MainLayout from '../layouts/main.astro';
   <script>
     import { supabase } from '../lib/supabase';
 
+    // Check if user is already logged in
+    async function checkAuthStatus() {
+      const authCheck = document.getElementById('auth-check');
+      const signupContent = document.getElementById('signup-content');
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          // User is already logged in, redirect to dashboard
+          window.location.href = '/dashboard';
+          return;
+        }
+
+        // User is not logged in, show the signup form
+        authCheck?.classList.add('hidden');
+        signupContent?.classList.remove('hidden');
+      } catch (error) {
+        console.error('Auth check error:', error);
+        // Show form on error
+        authCheck?.classList.add('hidden');
+        signupContent?.classList.remove('hidden');
+      }
+    }
+
+    // Run auth check on page load
+    checkAuthStatus();
+
     const signupForm = document.getElementById('signup-form');
     const errorMessage = document.getElementById('signup-error-message');
     const errorText = document.getElementById('signup-error-text');
@@ -258,14 +295,53 @@ import MainLayout from '../layouts/main.astro';
         }
 
         if (data.user) {
+          let profileExists = false;
+          let retries = 0;
+          const maxRetries = 5;
+          
+          while (!profileExists && retries < maxRetries) {
+            const { data: profileData, error: checkError } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('id', data.user.id)
+              .single();
+            
+            if (profileData) {
+              profileExists = true;
+            } else {
+              retries++;
+              await new Promise(resolve => setTimeout(resolve, 300));
+            }
+          }
+
+          if (!profileExists) {
+            throw new Error('Profile creation timeout. Please try again or contact support.');
+          }
+          
           // Update profile with CNP
           const { error: profileError } = await supabase
             .from('profiles')
-            .update({ cnp })
+            .update({ cnp, updated_at: new Date().toISOString() })
             .eq('id', data.user.id);
 
           if (profileError) {
             console.error('Error updating profile:', profileError);
+            
+            // Check if it's a duplicate CNP error
+            if (profileError.message?.includes('duplicate') || profileError.code === '23505') {
+              showError('This CNP is already registered with another account.');
+            } else {
+              showError('Error saving your CNP. Please try again or contact support.');
+            }
+            
+            // Reset button state
+            submitBtn.disabled = false;
+            submitText?.classList.remove('hidden');
+            loadingSpinner?.classList.add('hidden');
+            if (submitText) {
+              submitText.textContent = 'Create Account';
+            }
+            return;
           }
 
           // Show success

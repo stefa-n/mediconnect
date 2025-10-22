@@ -1,4 +1,6 @@
 ---
+import Navbar from '../components/Navbar.astro';
+
 import '../styles/globals.css';
 const { content } = Astro.props;
 ---
@@ -11,6 +13,7 @@ const { content } = Astro.props;
 		<title>{content.title}</title>
 	</head>
 	<body>
+		<Navbar />
 		<slot />
 	</body>
 </html>
