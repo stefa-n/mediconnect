@@ -573,7 +573,7 @@ const placeholderUser = { email: 'loading@example.com' };
     async function loadUsers() {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, hospital:hospitals(*)')
         .in('role', ['hospital_admin', 'mediconnect_admin'])
         .order('full_name');
 
@@ -851,6 +851,15 @@ const placeholderUser = { email: 'loading@example.com' };
     function updateHospitalNames() {
       document.querySelectorAll('.hospital-name').forEach(el => {
         const hospitalId = el.getAttribute('data-hospital-id');
+        
+        // First try to find hospital from the user's joined data
+        const user = usersData.find(u => u.hospital_id === hospitalId);
+        if (user && user.hospital) {
+          el.textContent = user.hospital.name;
+          return;
+        }
+        
+        // Fallback to hospitalsData array
         const hospital = hospitalsData.find(h => h.id === hospitalId);
         if (hospital) {
           el.textContent = hospital.name;

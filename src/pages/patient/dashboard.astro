@@ -107,30 +107,45 @@ const placeholderUser = { email: 'loading@example.com' };
         </div>
       </div>
 
-      <!-- Appointment Requests Section -->
+      <!-- Upcoming Appointments Section (Combined Requests & Scheduled) -->
       <div class="mb-6 bg-card rounded-xl shadow-lg border border-border overflow-hidden">
-        <div class="p-6 border-b border-border bg-gradient-to-r from-orange-50 to-yellow-50">
+        <div class="p-6 border-b border-border bg-gradient-to-r from-blue-50 to-purple-50">
           <h3 class="text-xl font-bold text-foreground flex items-center gap-2">
-            <i class="fas fa-clock text-orange-600"></i>
-            Your Appointment Requests
+            <i class="fas fa-calendar-alt text-blue-600"></i>
+            Upcoming Appointments
           </h3>
-          <p class="text-sm text-muted-foreground mt-1">Track the status of your appointment requests</p>
+          <p class="text-sm text-muted-foreground mt-1">View your scheduled appointments and pending requests</p>
         </div>
-        <div id="appointment-requests-container" class="p-6">
-          <!-- Appointment requests will be loaded here -->
+        <div id="upcoming-appointments-container" class="p-6">
+          <!-- Combined appointments and requests will be loaded here -->
         </div>
       </div>
 
       <!-- Main Content Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <!-- Appointments (2 columns on large screens) -->
-        <div class="lg:col-span-2">
-          <AppointmentCard delay={400} />
+        <!-- Quick Actions -->
+        <div class="lg:col-span-1">
+          <QuickActions delay={500} />
         </div>
         
-        <!-- Quick Actions -->
-        <div>
-          <QuickActions delay={500} />
+        <!-- Medical Records / Other Info (2 columns) -->
+        <div class="lg:col-span-2">
+          <div class="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
+            <div class="p-6 border-b border-border bg-gradient-to-r from-purple-50 to-pink-50">
+              <h3 class="text-xl font-bold text-foreground flex items-center gap-2">
+                <i class="fas fa-file-medical text-purple-600"></i>
+                Medical Records
+              </h3>
+              <p class="text-sm text-muted-foreground mt-1">Your health records and visit history</p>
+            </div>
+            <div class="p-6">
+              <div class="text-center py-12 text-muted-foreground">
+                <i class="fas fa-folder-open text-5xl mb-4 opacity-50"></i>
+                <p class="text-lg font-medium mb-2">No medical records yet</p>
+                <p class="text-sm">Records from your appointments will appear here</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -598,13 +613,8 @@ const placeholderUser = { email: 'loading@example.com' };
           recordsCount || 0
         );
 
-        // Update appointment requests
-        updateAppointmentRequests(appointmentRequests);
-
-        // Update appointments list
-        if (appointments && appointments.length > 0) {
-          updateAppointments(appointments);
-        }
+        // Update combined upcoming appointments (requests + scheduled appointments)
+        updateUpcomingAppointments(appointmentRequests, appointments || []);
 
         // Update prescriptions list
         if (prescriptions && prescriptions.length > 0) {
@@ -714,45 +724,6 @@ const placeholderUser = { email: 'loading@example.com' };
       }
     }
 
-    function updateAppointments(appointments: any[]) {
-      const container = document.getElementById('appointments-container');
-      if (!container) return;
-
-      container.innerHTML = appointments.map((apt) => {
-        const date = new Date(apt.appointment_date);
-        const dateStr = date.toLocaleDateString('en-US', { 
-          year: 'numeric', 
-          month: 'short', 
-          day: 'numeric' 
-        });
-        
-        const statusClass = apt.status === 'confirmed'
-          ? 'bg-green-500/10 text-green-600'
-          : 'bg-yellow-500/10 text-yellow-600';
-
-        return `
-          <div class="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors cursor-pointer">
-            <div class="flex items-center gap-4">
-              <div class="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
-                <i class="fas fa-stethoscope text-primary text-xl"></i>
-              </div>
-              <div>
-                <p class="font-semibold text-foreground">${apt.doctor?.full_name || 'Dr. Unknown'}</p>
-                <p class="text-sm text-muted-foreground">${apt.specialty || 'General Practice'}</p>
-              </div>
-            </div>
-            <div class="text-right">
-              <p class="font-medium text-foreground">${dateStr}</p>
-              <p class="text-sm text-muted-foreground">${apt.appointment_time}</p>
-              <span class="inline-block px-2 py-1 mt-1 text-xs rounded-full ${statusClass}">
-                ${apt.status}
-              </span>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
     function updatePrescriptions(prescriptions: any[]) {
       const container = document.getElementById('prescriptions-container');
       if (!container) return;
@@ -815,6 +786,231 @@ const placeholderUser = { email: 'loading@example.com' };
           </div>
         `;
       }).join('');
+    }
+
+    // Combined function to display both appointments and requests
+    function updateUpcomingAppointments(requests: any[], appointments: any[]) {
+      const container = document.getElementById('upcoming-appointments-container');
+      if (!container) return;
+
+      // Combine and sort by date
+      const combined: any[] = [];
+
+      // Add requests
+      requests.forEach(request => {
+        combined.push({
+          type: 'request',
+          data: request,
+          date: request.preferred_date || request.created_at,
+          sortDate: new Date(request.preferred_date || request.created_at)
+        });
+      });
+
+      // Add scheduled appointments
+      appointments.forEach(apt => {
+        combined.push({
+          type: 'appointment',
+          data: apt,
+          date: apt.appointment_date,
+          sortDate: new Date(apt.appointment_date)
+        });
+      });
+
+      // Sort by date (earliest first)
+      combined.sort((a, b) => a.sortDate.getTime() - b.sortDate.getTime());
+
+      if (combined.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 text-muted-foreground">
+            <i class="fas fa-calendar-plus text-5xl mb-4 opacity-50"></i>
+            <p class="text-lg font-medium mb-2">No upcoming appointments</p>
+            <p class="text-sm">Click "Request Appointment" to schedule your first visit</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = combined.map((item) => {
+        if (item.type === 'request') {
+          return renderRequestCard(item.data);
+        } else {
+          return renderAppointmentCard(item.data);
+        }
+      }).join('');
+
+      // Attach cancel button listeners
+      document.querySelectorAll('.cancel-request-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const requestId = (e.currentTarget as HTMLElement).dataset.requestId;
+          if (requestId) {
+            const confirmed = await showConfirm(
+              'Cancel Request',
+              'Are you sure you want to cancel this appointment request?',
+              { type: 'danger', confirmText: 'Yes, Cancel', cancelText: 'Keep Request' }
+            );
+            if (confirmed) {
+              await cancelAppointmentRequest(requestId);
+            }
+          }
+        });
+      });
+    }
+
+    function renderRequestCard(request: any) {
+      const statusConfig: Record<string, any> = {
+        pending: { bg: 'bg-orange-100', text: 'text-orange-700', icon: 'fa-clock', label: 'Pending Review' },
+        approved: { bg: 'bg-green-100', text: 'text-green-700', icon: 'fa-check-circle', label: 'Approved' },
+        rejected: { bg: 'bg-red-100', text: 'text-red-700', icon: 'fa-times-circle', label: 'Rejected' },
+        cancelled: { bg: 'bg-gray-100', text: 'text-gray-700', icon: 'fa-ban', label: 'Cancelled' }
+      };
+
+      const config = statusConfig[request.status] || statusConfig.pending;
+      const createdDate = new Date(request.created_at).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+      });
+
+      return `
+        <div class="p-4 rounded-lg border-2 border-dashed border-orange-200 bg-orange-50/30 hover:bg-orange-50/50 transition-colors mb-3">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-2">
+                <i class="fas fa-hospital text-primary"></i>
+                <p class="font-semibold text-foreground">${request.hospital?.name || 'Hospital'}</p>
+                <span class="text-xs text-orange-600 font-medium px-2 py-0.5 bg-orange-100 rounded">REQUEST</span>
+              </div>
+              ${request.department ? `
+                <p class="text-sm text-blue-600 ml-6 font-medium">
+                  <i class="fas fa-stethoscope mr-1"></i>
+                  ${request.department}
+                </p>
+              ` : ''}
+              ${request.medic ? `
+                <p class="text-sm text-muted-foreground ml-6">
+                  <i class="fas fa-user-md mr-1"></i>
+                  Assigned to: Dr. ${request.medic.full_name}
+                </p>
+              ` : `
+                <p class="text-sm text-muted-foreground ml-6">
+                  <i class="fas fa-users-medical mr-1"></i>
+                  Awaiting doctor assignment
+                </p>
+              `}
+            </div>
+            <span class="px-3 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text} flex items-center gap-1">
+              <i class="fas ${config.icon}"></i>
+              ${config.label}
+            </span>
+          </div>
+          
+          <div class="bg-white rounded p-3 mb-2">
+            <p class="text-sm text-foreground"><strong>Reason:</strong> ${request.reason}</p>
+          </div>
+
+          <div class="flex items-center justify-between text-xs text-muted-foreground">
+            <span>
+              <i class="fas fa-calendar mr-1"></i>
+              Requested on ${createdDate}
+            </span>
+            ${request.preferred_date ? `
+              <span>
+                <i class="fas fa-clock mr-1"></i>
+                Preferred: ${new Date(request.preferred_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
+            ` : ''}
+          </div>
+
+          ${request.status === 'rejected' && request.rejection_reason ? `
+            <div class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p class="text-sm font-medium text-red-800 mb-1">
+                <i class="fas fa-info-circle mr-2"></i>
+                Reason for rejection:
+              </p>
+              <p class="text-sm text-red-700">${request.rejection_reason}</p>
+            </div>
+          ` : ''}
+
+          ${request.status === 'pending' ? `
+            <button 
+              class="cancel-request-btn mt-3 w-full px-4 py-2 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+              data-request-id="${request.id}"
+            >
+              <i class="fas fa-times-circle mr-2"></i>
+              Cancel Request
+            </button>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    function renderAppointmentCard(appointment: any) {
+      const statusConfig: Record<string, any> = {
+        scheduled: { bg: 'bg-blue-100', text: 'text-blue-700', icon: 'fa-calendar-check', label: 'Scheduled' },
+        completed: { bg: 'bg-green-100', text: 'text-green-700', icon: 'fa-check-circle', label: 'Completed' },
+        cancelled: { bg: 'bg-red-100', text: 'text-red-700', icon: 'fa-times-circle', label: 'Cancelled' },
+        no_show: { bg: 'bg-gray-100', text: 'text-gray-700', icon: 'fa-user-slash', label: 'No Show' }
+      };
+
+      const config = statusConfig[appointment.status] || statusConfig.scheduled;
+      const appointmentDate = new Date(appointment.appointment_date);
+      const formattedDate = appointmentDate.toLocaleDateString('en-US', { 
+        weekday: 'long',
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric'
+      });
+      const formattedTime = appointmentDate.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      return `
+        <div class="p-4 rounded-lg border-2 border-blue-200 bg-blue-50/30 hover:bg-blue-50/50 transition-colors mb-3">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                  ${appointment.medics?.full_name?.charAt(0).toUpperCase() || 'D'}
+                </div>
+                <div>
+                  <p class="font-semibold text-foreground">Dr. ${appointment.medics?.full_name || 'Doctor'}</p>
+                  <p class="text-xs text-muted-foreground">${appointment.hospitals?.name || 'Hospital'}</p>
+                </div>
+              </div>
+            </div>
+            <span class="px-3 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text} flex items-center gap-1">
+              <i class="fas ${config.icon}"></i>
+              ${config.label}
+            </span>
+          </div>
+
+          <div class="bg-white rounded p-3 mb-2">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <p class="text-xs text-muted-foreground mb-1">Date</p>
+                <p class="text-sm font-medium text-foreground">
+                  <i class="fas fa-calendar mr-1 text-blue-600"></i>
+                  ${formattedDate}
+                </p>
+              </div>
+              <div>
+                <p class="text-xs text-muted-foreground mb-1">Time</p>
+                <p class="text-sm font-medium text-foreground">
+                  <i class="fas fa-clock mr-1 text-blue-600"></i>
+                  ${formattedTime}
+                </p>
+              </div>
+            </div>
+            ${appointment.reason ? `
+              <div class="mt-2 pt-2 border-t border-gray-200">
+                <p class="text-xs text-muted-foreground mb-1">Reason</p>
+                <p class="text-sm text-foreground">${appointment.reason}</p>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
     }
 
     function updateAppointmentRequests(requests: any[]) {

@@ -1,0 +1,616 @@
+---
+import MainLayout from '../layouts/main.astro';
+import Navbar from '../components/Navbar.astro';
+
+// Pass placeholder user for navbar (will be updated client-side)
+const placeholderUser = { email: 'loading@example.com' };
+---
+
+<MainLayout content={{ title: 'My Profile - MediConnect' }}>
+  <!-- Font Awesome for icons -->
+  <link 
+    rel="stylesheet" 
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+    crossorigin="anonymous"
+  />
+  
+  <Navbar user={placeholderUser} />
+
+  <!-- Loading Screen -->
+  <div id="loading-screen" class="flex items-center justify-center min-h-screen bg-background">
+    <div class="text-center">
+      <i class="fas fa-spinner fa-spin text-4xl text-primary mb-4"></i>
+      <p class="text-muted-foreground">Loading profile...</p>
+    </div>
+  </div>
+
+  <!-- Main Profile Content (hidden initially) -->
+  <div id="profile-content" class="hidden min-h-screen bg-background">
+    <div class="max-w-4xl mx-auto px-4 py-8">
+      <!-- Header -->
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold text-foreground mb-2">My Profile</h1>
+        <p class="text-muted-foreground">Manage your personal information and account settings</p>
+      </div>
+
+      <!-- Profile Picture Section -->
+      <div class="bg-card rounded-lg border border-border p-6 mb-6">
+        <h2 class="text-xl font-semibold text-foreground mb-4">Profile Picture</h2>
+        <div class="flex items-center gap-6">
+          <div class="relative group">
+            <div id="avatar-container" class="w-32 h-32 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white text-5xl font-bold overflow-hidden">
+              <span id="avatar-initials">U</span>
+              <img id="avatar-image" class="w-full h-full object-cover hidden" alt="Profile picture" />
+            </div>
+            <div class="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer" id="avatar-upload-overlay">
+              <i class="fas fa-camera text-white text-2xl"></i>
+            </div>
+          </div>
+          <div>
+            <input type="file" id="avatar-input" accept="image/*" class="hidden" />
+            <button id="upload-avatar-btn" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors mb-2">
+              <i class="fas fa-upload mr-2"></i>
+              Upload Photo
+            </button>
+            <button id="remove-avatar-btn" class="block px-4 py-2 text-sm text-red-600 hover:text-red-700 transition-colors">
+              <i class="fas fa-trash mr-2"></i>
+              Remove Photo
+            </button>
+            <p class="text-xs text-muted-foreground mt-2">JPG, PNG or GIF. Max size 2MB.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Personal Information Section -->
+      <div class="bg-card rounded-lg border border-border p-6 mb-6">
+        <h2 class="text-xl font-semibold text-foreground mb-4">Personal Information</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-foreground mb-2">Full Name</label>
+            <div id="profile-name" class="px-4 py-3 bg-accent/50 rounded-lg border border-border text-foreground">
+              Loading...
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-foreground mb-2">CNP (Personal ID)</label>
+            <div id="profile-cnp" class="px-4 py-3 bg-accent/50 rounded-lg border border-border text-foreground">
+              Loading...
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-foreground mb-2">Role</label>
+            <div id="profile-role" class="px-4 py-3 bg-accent/50 rounded-lg border border-border text-foreground capitalize">
+              Loading...
+            </div>
+          </div>
+          <div id="profile-department-container" class="hidden">
+            <label class="block text-sm font-medium text-foreground mb-2">Department</label>
+            <div id="profile-department" class="px-4 py-3 bg-accent/50 rounded-lg border border-border text-foreground">
+              Loading...
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Account Settings Section -->
+      <div class="bg-card rounded-lg border border-border p-6 mb-6">
+        <h2 class="text-xl font-semibold text-foreground mb-4">Account Settings</h2>
+        
+        <!-- Change Email -->
+        <div class="mb-6 pb-6 border-b border-border">
+          <h3 class="text-lg font-medium text-foreground mb-3">Email Address</h3>
+          <div class="flex items-end gap-3">
+            <div class="flex-1">
+              <label class="block text-sm font-medium text-foreground mb-2">Current Email</label>
+              <input 
+                type="email" 
+                id="current-email" 
+                value=""
+                disabled
+                class="w-full px-4 py-2 bg-accent/50 rounded-lg border border-border text-foreground"
+              />
+            </div>
+            <button id="change-email-btn" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+              <i class="fas fa-edit mr-2"></i>
+              Change Email
+            </button>
+          </div>
+        </div>
+
+        <!-- Change Password -->
+        <div>
+          <h3 class="text-lg font-medium text-foreground mb-3">Password</h3>
+          <button id="change-password-btn" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+            <i class="fas fa-key mr-2"></i>
+            Change Password
+          </button>
+        </div>
+      </div>
+
+      <!-- Danger Zone -->
+      <div class="bg-card rounded-lg border border-red-200 p-6">
+        <h2 class="text-xl font-semibold text-red-600 mb-2">Danger Zone</h2>
+        <p class="text-sm text-muted-foreground mb-4">Once you delete your account, there is no going back. Please be certain.</p>
+        <button id="delete-account-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+          <i class="fas fa-exclamation-triangle mr-2"></i>
+          Delete Account
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change Email Modal -->
+  <div id="email-modal" class="hidden fixed inset-0 bg-black/50 z-50 items-center justify-center p-4">
+    <div id="email-modal-content" class="bg-card rounded-lg border border-border p-6 max-w-md w-full scale-95 opacity-0 transition-all duration-200">
+      <h3 class="text-xl font-semibold text-foreground mb-4">Change Email Address</h3>
+      <form id="email-form" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-foreground mb-2">New Email Address</label>
+          <input 
+            type="email" 
+            id="new-email" 
+            required
+            placeholder="Enter new email address"
+            class="w-full px-4 py-2 bg-background rounded-lg border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-foreground mb-2">Confirm Password</label>
+          <input 
+            type="password" 
+            id="email-password" 
+            required
+            placeholder="Enter your current password"
+            class="w-full px-4 py-2 bg-background rounded-lg border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+        <p class="text-xs text-muted-foreground">
+          <i class="fas fa-info-circle mr-1"></i>
+          You will receive a confirmation email at your new address.
+        </p>
+        <div class="flex gap-3 pt-4">
+          <button type="submit" class="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+            Update Email
+          </button>
+          <button type="button" id="cancel-email-btn" class="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-accent transition-colors">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Change Password Modal -->
+  <div id="password-modal" class="hidden fixed inset-0 bg-black/50 z-50 items-center justify-center p-4">
+    <div id="password-modal-content" class="bg-card rounded-lg border border-border p-6 max-w-md w-full scale-95 opacity-0 transition-all duration-200">
+      <h3 class="text-xl font-semibold text-foreground mb-4">Change Password</h3>
+      <form id="password-form" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-foreground mb-2">Current Password</label>
+          <input 
+            type="password" 
+            id="current-password" 
+            required
+            placeholder="Enter current password"
+            class="w-full px-4 py-2 bg-background rounded-lg border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-foreground mb-2">New Password</label>
+          <input 
+            type="password" 
+            id="new-password" 
+            required
+            minlength="6"
+            placeholder="Enter new password"
+            class="w-full px-4 py-2 bg-background rounded-lg border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-foreground mb-2">Confirm New Password</label>
+          <input 
+            type="password" 
+            id="confirm-password" 
+            required
+            minlength="6"
+            placeholder="Confirm new password"
+            class="w-full px-4 py-2 bg-background rounded-lg border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+        <p class="text-xs text-muted-foreground">
+          <i class="fas fa-info-circle mr-1"></i>
+          Password must be at least 6 characters long.
+        </p>
+        <div class="flex gap-3 pt-4">
+          <button type="submit" class="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+            Update Password
+          </button>
+          <button type="button" id="cancel-password-btn" class="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-accent transition-colors">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="hidden fixed bottom-4 right-4 bg-card border border-border rounded-lg shadow-lg p-4 z-50 min-w-[300px]">
+    <div class="flex items-center gap-3">
+      <div id="toast-icon" class="text-2xl"></div>
+      <div class="flex-1">
+        <p id="toast-message" class="text-sm text-foreground font-medium"></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { supabase } from '../lib/supabase';
+
+    let userId: string = '';
+    let currentAvatarUrl: string | null = null;
+    let userProfile: any = null;
+    let userSession: any = null;
+
+    // Initialize and check authentication
+    async function initProfile() {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error || !session) {
+        window.location.href = '/auth';
+        return;
+      }
+
+      userId = session.user.id;
+      userSession = session;
+
+      // Load profile data
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (profileError) {
+        console.error('Error loading profile:', profileError);
+        showToast('Failed to load profile', 'error');
+        return;
+      }
+
+      userProfile = profile;
+
+      // Update UI with profile data
+      updateProfileUI(profile, session.user);
+
+      // Hide loading, show content
+      document.getElementById('loading-screen')?.classList.add('hidden');
+      document.getElementById('profile-content')?.classList.remove('hidden');
+    }
+
+    function updateProfileUI(profile: any, user: any) {
+      // Update avatar initials
+      const initials = profile?.full_name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U';
+      const avatarInitials = document.getElementById('avatar-initials');
+      if (avatarInitials) {
+        avatarInitials.textContent = initials;
+      }
+
+      // Update personal information
+      const nameEl = document.getElementById('profile-name');
+      const cnpEl = document.getElementById('profile-cnp');
+      const roleEl = document.getElementById('profile-role');
+      const deptEl = document.getElementById('profile-department');
+      const deptContainer = document.getElementById('profile-department-container');
+      
+      if (nameEl) nameEl.textContent = profile?.full_name || 'Not set';
+      if (cnpEl) cnpEl.textContent = profile?.cnp || 'Not set';
+      if (roleEl) roleEl.textContent = profile?.role?.replace('_', ' ') || 'Not set';
+      
+      if (profile?.department && deptEl && deptContainer) {
+        deptEl.textContent = profile.department;
+        deptContainer.classList.remove('hidden');
+      }
+
+      // Update email
+      const emailInput = document.getElementById('current-email') as HTMLInputElement;
+      if (emailInput) {
+        emailInput.value = user.email || '';
+      }
+
+      // Load avatar if exists
+      if (profile?.avatar_url) {
+        loadAvatar();
+      }
+    }
+
+    // Toast notification
+    function showToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
+      const toast = document.getElementById('toast');
+      const toastMessage = document.getElementById('toast-message');
+      const toastIcon = document.getElementById('toast-icon');
+      
+      if (!toast || !toastMessage || !toastIcon) return;
+
+      const icons = {
+        success: '<i class="fas fa-check-circle text-green-500"></i>',
+        error: '<i class="fas fa-exclamation-circle text-red-500"></i>',
+        info: '<i class="fas fa-info-circle text-blue-500"></i>'
+      };
+
+      toastIcon.innerHTML = icons[type];
+      toastMessage.textContent = message;
+      
+      toast.classList.remove('hidden');
+      
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3000);
+    }
+
+    // Load avatar
+    async function loadAvatar() {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', userId)
+        .single();
+
+      if (profile?.avatar_url) {
+        currentAvatarUrl = profile.avatar_url;
+        const avatarImage = document.getElementById('avatar-image') as HTMLImageElement;
+        const avatarInitials = document.getElementById('avatar-initials');
+        
+        if (avatarImage && avatarInitials) {
+          avatarImage.src = profile.avatar_url;
+          avatarImage.classList.remove('hidden');
+          avatarInitials.classList.add('hidden');
+        }
+      }
+    }
+
+    // Upload avatar
+    async function uploadAvatar(file: File) {
+      if (file.size > 2 * 1024 * 1024) {
+        showToast('File size must be less than 2MB', 'error');
+        return;
+      }
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('profiles')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) {
+        // If bucket doesn't exist, show helpful error
+        if (uploadError.message.includes('not found')) {
+          showToast('Storage bucket not configured. Please contact administrator.', 'error');
+        } else {
+          showToast('Failed to upload image', 'error');
+        }
+        console.error('Upload error:', uploadError);
+        return;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('profiles')
+        .getPublicUrl(filePath);
+
+      const avatarUrl = urlData.publicUrl;
+
+      // Update profile
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: avatarUrl })
+        .eq('id', userId);
+
+      if (updateError) {
+        showToast('Failed to update profile', 'error');
+        console.error('Update error:', updateError);
+        return;
+      }
+
+      // Delete old avatar if exists
+      if (currentAvatarUrl && currentAvatarUrl.includes('supabase')) {
+        const oldPathMatch = currentAvatarUrl.match(/avatars\/[^?]+/);
+        if (oldPathMatch) {
+          await supabase.storage.from('profiles').remove([oldPathMatch[0]]);
+        }
+      }
+
+      currentAvatarUrl = avatarUrl;
+      
+      const avatarImage = document.getElementById('avatar-image') as HTMLImageElement;
+      const avatarInitials = document.getElementById('avatar-initials');
+      
+      if (avatarImage && avatarInitials) {
+        avatarImage.src = avatarUrl;
+        avatarImage.classList.remove('hidden');
+        avatarInitials.classList.add('hidden');
+      }
+
+      showToast('Profile picture updated successfully', 'success');
+    }
+
+    // Remove avatar
+    async function removeAvatar() {
+      if (!currentAvatarUrl) {
+        showToast('No profile picture to remove', 'info');
+        return;
+      }
+
+      // Delete from storage if it's a Supabase URL
+      if (currentAvatarUrl.includes('supabase')) {
+        const oldPathMatch = currentAvatarUrl.match(/avatars\/[^?]+/);
+        if (oldPathMatch) {
+          const { error: deleteError } = await supabase.storage
+            .from('profiles')
+            .remove([oldPathMatch[0]]);
+            
+          if (deleteError) {
+            console.error('Delete error:', deleteError);
+          }
+        }
+      }
+
+      // Update profile
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: null })
+        .eq('id', userId);
+
+      if (updateError) {
+        showToast('Failed to remove profile picture', 'error');
+        return;
+      }
+
+      currentAvatarUrl = null;
+      
+      const avatarImage = document.getElementById('avatar-image');
+      const avatarInitials = document.getElementById('avatar-initials');
+      
+      if (avatarImage && avatarInitials) {
+        avatarImage.classList.add('hidden');
+        avatarInitials.classList.remove('hidden');
+      }
+
+      showToast('Profile picture removed', 'success');
+    }
+
+    // Change email
+    async function changeEmail(newEmail: string, password: string) {
+      const { error } = await supabase.auth.updateUser(
+        { email: newEmail },
+        { emailRedirectTo: window.location.origin }
+      );
+
+      if (error) {
+        showToast(error.message, 'error');
+        return false;
+      }
+
+      showToast('Confirmation email sent to your new address', 'success');
+      return true;
+    }
+
+    // Change password
+    async function changePassword(newPassword: string) {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) {
+        showToast(error.message, 'error');
+        return false;
+      }
+
+      showToast('Password updated successfully', 'success');
+      return true;
+    }
+
+    // Modal helpers
+    function openModal(modalId: string) {
+      const modal = document.getElementById(modalId);
+      const modalContent = document.getElementById(`${modalId}-content`);
+      
+      if (!modal || !modalContent) return;
+
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+      
+      setTimeout(() => {
+        modalContent.classList.remove('scale-95', 'opacity-0');
+        modalContent.classList.add('scale-100', 'opacity-100');
+      }, 10);
+    }
+
+    function closeModal(modalId: string) {
+      const modal = document.getElementById(modalId);
+      const modalContent = document.getElementById(`${modalId}-content`);
+      
+      if (!modal || !modalContent) return;
+
+      modalContent.classList.remove('scale-100', 'opacity-100');
+      modalContent.classList.add('scale-95', 'opacity-0');
+      
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+      }, 200);
+    }
+
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize profile first
+      initProfile();
+
+      // Avatar upload
+      const uploadBtn = document.getElementById('upload-avatar-btn');
+      const avatarInput = document.getElementById('avatar-input') as HTMLInputElement;
+      const avatarOverlay = document.getElementById('avatar-upload-overlay');
+
+      uploadBtn?.addEventListener('click', () => avatarInput?.click());
+      avatarOverlay?.addEventListener('click', () => avatarInput?.click());
+      
+      avatarInput?.addEventListener('change', (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) uploadAvatar(file);
+      });
+
+      // Remove avatar
+      document.getElementById('remove-avatar-btn')?.addEventListener('click', removeAvatar);
+
+      // Change email
+      document.getElementById('change-email-btn')?.addEventListener('click', () => openModal('email-modal'));
+      document.getElementById('cancel-email-btn')?.addEventListener('click', () => closeModal('email-modal'));
+      
+      document.getElementById('email-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const newEmail = (document.getElementById('new-email') as HTMLInputElement).value;
+        const password = (document.getElementById('email-password') as HTMLInputElement).value;
+        
+        const success = await changeEmail(newEmail, password);
+        if (success) {
+          closeModal('email-modal');
+          (e.target as HTMLFormElement).reset();
+        }
+      });
+
+      // Change password
+      document.getElementById('change-password-btn')?.addEventListener('click', () => openModal('password-modal'));
+      document.getElementById('cancel-password-btn')?.addEventListener('click', () => closeModal('password-modal'));
+      
+      document.getElementById('password-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const newPassword = (document.getElementById('new-password') as HTMLInputElement).value;
+        const confirmPassword = (document.getElementById('confirm-password') as HTMLInputElement).value;
+        
+        if (newPassword !== confirmPassword) {
+          showToast('Passwords do not match', 'error');
+          return;
+        }
+        
+        const success = await changePassword(newPassword);
+        if (success) {
+          closeModal('password-modal');
+          (e.target as HTMLFormElement).reset();
+        }
+      });
+
+      // Delete account
+      document.getElementById('delete-account-btn')?.addEventListener('click', async () => {
+        const confirmed = confirm('Are you sure you want to delete your account? This action cannot be undone.');
+        if (!confirmed) return;
+
+        const doubleConfirm = confirm('This will permanently delete all your data. Are you absolutely sure?');
+        if (!doubleConfirm) return;
+
+        showToast('Account deletion is not yet implemented. Please contact support.', 'info');
+      });
+    });
+  </script>
+</MainLayout>

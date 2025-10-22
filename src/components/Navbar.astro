@@ -49,12 +49,45 @@ const { user, transparent = false } = Astro.props;
           <!-- User Menu -->
           <div class="flex items-center space-x-3">
             <!-- Notifications Button -->
-            <button class="relative p-2 rounded-full text-gray-600 hover:bg-gray-100 transition-colors duration-150" aria-label="Notifications">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-              <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+            <div class="relative">
+              <button id="notifications-button" class="relative p-2 rounded-full text-gray-600 hover:bg-gray-100 transition-colors duration-150" aria-label="Notifications">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                <span id="notifications-badge" class="hidden absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+              </button>
+
+              <!-- Notifications Dropdown -->
+              <div id="notifications-dropdown" class="hidden absolute right-0 top-full mt-2 w-96 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-50 max-h-[32rem]">
+                <!-- Header -->
+                <div class="p-4 bg-gradient-to-br from-blue-50 to-purple-50 border-b border-gray-200">
+                  <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-semibold text-gray-900">Notifications</h3>
+                    <button id="mark-all-read-btn" class="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                      Mark all as read
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Notifications List -->
+                <div id="notifications-list" class="overflow-y-auto max-h-96">
+                  <!-- Will be populated dynamically -->
+                  <div class="flex items-center justify-center py-12 text-muted-foreground">
+                    <div class="text-center">
+                      <i class="fas fa-spinner fa-spin text-3xl mb-2"></i>
+                      <p class="text-sm">Loading notifications...</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="p-3 bg-gray-50 border-t border-gray-200">
+                  <a href="/notifications" class="block text-center text-xs text-blue-600 hover:text-blue-700 font-medium">
+                    View all notifications
+                  </a>
+                </div>
+              </div>
+            </div>
 
             <!-- Apps Button -->
             <button class="p-2 rounded-full text-gray-600 hover:bg-gray-100 transition-colors duration-150" aria-label="Apps">
@@ -179,6 +212,9 @@ const { user, transparent = false } = Astro.props;
 <script>
   import { supabase } from '../lib/supabase';
 
+  let currentUserId: string | null = null;
+  let notificationsData: any[] = [];
+
   // Mobile menu toggle
   const mobileMenuButton = document.getElementById('mobile-menu-button');
   const mobileMenu = document.getElementById('mobile-menu');
@@ -198,14 +234,209 @@ const { user, transparent = false } = Astro.props;
   userMenuButton?.addEventListener('click', (e) => {
     e.stopPropagation();
     userDropdown?.classList.toggle('hidden');
+    // Close notifications when opening user menu
+    document.getElementById('notifications-dropdown')?.classList.add('hidden');
   });
 
-  // Close dropdown when clicking outside
-  document.addEventListener('click', (e) => {
-    if (!userDropdown?.contains(e.target as Node) && !userMenuButton?.contains(e.target as Node)) {
-      userDropdown?.classList.add('hidden');
+  // Notifications dropdown toggle
+  const notificationsButton = document.getElementById('notifications-button');
+  const notificationsDropdown = document.getElementById('notifications-dropdown');
+
+  notificationsButton?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    notificationsDropdown?.classList.toggle('hidden');
+    // Close user menu when opening notifications
+    userDropdown?.classList.add('hidden');
+    
+    // Load notifications when opened
+    if (!notificationsDropdown?.classList.contains('hidden')) {
+      await loadNotifications();
     }
   });
+
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', (e) => {
+    const target = e.target as Node;
+    if (!userDropdown?.contains(target) && !userMenuButton?.contains(target)) {
+      userDropdown?.classList.add('hidden');
+    }
+    if (!notificationsDropdown?.contains(target) && !notificationsButton?.contains(target)) {
+      notificationsDropdown?.classList.add('hidden');
+    }
+  });
+
+  // Load notifications
+  async function loadNotifications() {
+    if (!currentUserId) return;
+
+    const container = document.getElementById('notifications-list');
+    if (!container) return;
+
+    try {
+      // Get user profile to determine role
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', currentUserId)
+        .single();
+
+      if (!profile) return;
+
+      // Load notifications based on role
+      let notifications: any[] = [];
+
+      if (profile.role === 'patient') {
+        // For patients: appointment request updates
+        const { data, error } = await supabase
+          .from('appointment_requests')
+          .select('*, hospital:hospitals(name)')
+          .eq('patient_id', currentUserId)
+          .or('status.eq.approved,status.eq.rejected')
+          .order('updated_at', { ascending: false })
+          .limit(10);
+
+        if (!error && data) {
+          notifications = data.map((req: any) => ({
+            id: req.id,
+            type: req.status === 'approved' ? 'success' : 'error',
+            title: req.status === 'approved' ? 'Appointment Approved' : 'Appointment Rejected',
+            message: req.status === 'approved' 
+              ? `Your appointment request to ${req.hospital?.name} has been approved.`
+              : `Your appointment request was rejected. ${req.rejection_reason || ''}`,
+            time: new Date(req.updated_at).toLocaleString(),
+            read: false
+          }));
+        }
+      } else if (profile.role === 'hospital_medic') {
+        // For medics: new appointment requests
+        const { data: medicProfile } = await supabase
+          .from('profiles')
+          .select('hospital_id, department')
+          .eq('id', currentUserId)
+          .single();
+
+        if (medicProfile?.hospital_id) {
+          let query = supabase
+            .from('appointment_requests')
+            .select('*, patient:profiles!appointment_requests_patient_id_fkey(full_name), hospital:hospitals(name)')
+            .eq('hospital_id', medicProfile.hospital_id)
+            .eq('status', 'pending');
+
+          // Filter by department if medic has one
+          if (medicProfile.department) {
+            query = query.or(`medic_id.eq.${currentUserId},and(medic_id.is.null,or(department.eq.${medicProfile.department},department.is.null))`);
+          } else {
+            query = query.or(`medic_id.eq.${currentUserId},medic_id.is.null`);
+          }
+
+          const { data, error } = await query
+            .order('created_at', { ascending: false })
+            .limit(10);
+
+          if (!error && data) {
+            notifications = data.map((req: any) => ({
+              id: req.id,
+              type: 'info',
+              title: 'New Appointment Request',
+              message: `${req.patient?.full_name || 'A patient'} requested an appointment${req.department ? ` for ${req.department}` : ''}.`,
+              time: new Date(req.created_at).toLocaleString(),
+              read: false
+            }));
+          }
+        }
+      }
+
+      notificationsData = notifications;
+      renderNotifications();
+      updateNotificationsBadge();
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+      if (container) {
+        container.innerHTML = `
+          <div class="text-center py-12 text-muted-foreground">
+            <i class="fas fa-exclamation-triangle text-3xl mb-2 text-orange-500"></i>
+            <p class="text-sm">Failed to load notifications</p>
+          </div>
+        `;
+      }
+    }
+  }
+
+  function renderNotifications() {
+    const container = document.getElementById('notifications-list');
+    if (!container) return;
+
+    if (notificationsData.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-12 text-muted-foreground">
+          <i class="fas fa-bell-slash text-3xl mb-2"></i>
+          <p class="text-sm">No notifications yet</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = notificationsData.map(notif => {
+      const iconConfig = {
+        success: { icon: 'fa-check-circle', color: 'text-green-600', bg: 'bg-green-100' },
+        error: { icon: 'fa-times-circle', color: 'text-red-600', bg: 'bg-red-100' },
+        info: { icon: 'fa-info-circle', color: 'text-blue-600', bg: 'bg-blue-100' },
+        warning: { icon: 'fa-exclamation-triangle', color: 'text-orange-600', bg: 'bg-orange-100' }
+      };
+      const config = iconConfig[notif.type as keyof typeof iconConfig] || iconConfig.info;
+
+      return `
+        <div class="p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${notif.read ? 'opacity-60' : ''}">
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-10 h-10 ${config.bg} rounded-full flex items-center justify-center">
+              <i class="fas ${config.icon} ${config.color}"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-gray-900 mb-1">${notif.title}</p>
+              <p class="text-xs text-gray-600 mb-2 leading-relaxed">${notif.message}</p>
+              <p class="text-xs text-gray-400">
+                <i class="fas fa-clock mr-1"></i>
+                ${notif.time}
+              </p>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function updateNotificationsBadge() {
+    const badge = document.getElementById('notifications-badge');
+    if (!badge) return;
+
+    const unreadCount = notificationsData.filter(n => !n.read).length;
+    if (unreadCount > 0) {
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+
+  // Mark all as read
+  document.getElementById('mark-all-read-btn')?.addEventListener('click', () => {
+    notificationsData = notificationsData.map(n => ({ ...n, read: true }));
+    renderNotifications();
+    updateNotificationsBadge();
+  });
+
+  // Initialize
+  async function initNotifications() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      currentUserId = user.id;
+      // Initial load
+      await loadNotifications();
+      // Refresh every 30 seconds
+      setInterval(loadNotifications, 30000);
+    }
+  }
+
+  initNotifications();
 
   // Sign out handler
   const signoutBtn = document.getElementById('signout-btn');
