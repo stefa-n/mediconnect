@@ -686,7 +686,7 @@ const placeholderUser = { email: 'loading@example.com' };
             </div>
 
             <!-- Hospital Details (Collapsible) -->
-            <div class="hospital-details" data-hospital-id="${hospital.id}">
+            <div class="hospital-details hidden" data-hospital-id="${hospital.id}">
               <div class="px-5 pb-5 space-y-4 border-t border-border bg-gradient-to-b from-accent/20 to-transparent">
                 <!-- Loading State (hidden by default) -->
                 <div class="hospital-loading hidden py-8 text-center">
@@ -726,21 +726,33 @@ const placeholderUser = { email: 'loading@example.com' };
 
     // Toggle hospital expansion
     async function toggleHospital(hospitalId: string) {
-      const hospitalItem = document.querySelector(`.hospital-item[data-hospital-id="${hospitalId}"]`);
-      const detailsSection = document.querySelector(`.hospital-details[data-hospital-id="${hospitalId}"]`);
+      const hospitalItem = document.querySelector(`.hospital-item[data-hospital-id="${hospitalId}"]`) as HTMLElement;
+      const detailsSection = document.querySelector(`.hospital-details[data-hospital-id="${hospitalId}"]`) as HTMLElement;
+      const expandIcon = hospitalItem?.querySelector('.expand-icon') as HTMLElement;
       
-      if (!hospitalItem || !detailsSection) return;
+      if (!hospitalItem || !detailsSection) {
+        console.error('Hospital elements not found:', { hospitalItem, detailsSection, hospitalId });
+        return;
+      }
 
       const isExpanded = hospitalItem.classList.contains('expanded');
 
       if (isExpanded) {
         // Collapse
         hospitalItem.classList.remove('expanded');
-        detailsSection.classList.remove('show');
+        detailsSection.classList.add('hidden');
+        if (expandIcon) {
+          expandIcon.style.transition = '0.3s';
+          expandIcon.style.transform = 'rotate(0deg)';
+        }
       } else {
         // Expand
         hospitalItem.classList.add('expanded');
-        detailsSection.classList.add('show');
+        detailsSection.classList.remove('hidden');
+        if (expandIcon) {
+          expandIcon.style.transition = '0.3s';
+          expandIcon.style.transform = 'rotate(90deg)';
+        }
         
         // Load hospital data if not already loaded
         if (!detailsSection.classList.contains('data-loaded')) {
@@ -1820,6 +1832,27 @@ const placeholderUser = { email: 'loading@example.com' };
     .delete-user-btn,
     .delete-hospital-btn {
       animation-delay: 0.15s;
+    }
+
+    /* Hospital expansion styles */
+    .expand-icon {
+      transition: transform 0.3s ease;
+      display: inline-block;
+    }
+
+    /* Smooth transition for hospital item background */
+    .hospital-header {
+      transition: background-color 0.2s ease !important;
+    }
+
+    .hospital-loading,
+    .hospital-content {
+      transition: opacity 0.2s ease-in-out;
+    }
+
+    /* Ensure overflow is properly handled */
+    .hospital-item {
+      overflow: hidden !important;
     }
   </style>
 </MainLayout>
