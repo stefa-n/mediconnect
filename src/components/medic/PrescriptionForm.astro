@@ -1,0 +1,191 @@
+<!-- Prescription Form Modal -->
+<div id="prescription-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[95] p-4 overflow-y-auto">
+  <div class="min-h-screen flex items-center justify-center py-8">
+    <div id="prescription-modal-content" class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full transform transition-all scale-95 opacity-0">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-green-600 to-teal-600 text-white p-6 rounded-t-2xl">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+              <i class="fas fa-prescription text-2xl"></i>
+            </div>
+            <div>
+              <h3 class="text-2xl font-bold">New Prescription</h3>
+              <p id="prescription-patient-name" class="text-green-100 text-sm">Patient Name</p>
+            </div>
+          </div>
+          <button id="close-prescription-modal" class="text-white/80 hover:text-white transition-colors p-2">
+            <i class="fas fa-times text-2xl"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Form -->
+      <form id="prescription-form" class="p-6 space-y-4">
+        <input type="hidden" id="rx-patient-id" />
+        <input type="hidden" id="rx-appointment-id" />
+        <input type="hidden" id="rx-medical-history-id" />
+
+        <!-- Medication Name (Required) -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-900 mb-2">
+            Medication Name <span class="text-red-500">*</span>
+          </label>
+          <input 
+            type="text" 
+            id="rx-medication" 
+            required
+            placeholder="e.g., Amoxicillin, Ibuprofen"
+            class="w-full px-4 py-3 bg-white rounded-lg border-2 border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+          />
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-4">
+          <!-- Dosage (Required) -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-900 mb-2">
+              Dosage <span class="text-red-500">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="rx-dosage" 
+              required
+              placeholder="e.g., 500mg, 10ml"
+              class="w-full px-4 py-3 bg-white rounded-lg border-2 border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+            />
+          </div>
+
+          <!-- Frequency (Required) -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-900 mb-2">
+              Frequency <span class="text-red-500">*</span>
+            </label>
+            <select 
+              id="rx-frequency" 
+              required
+              class="w-full px-4 py-3 bg-white rounded-lg border-2 border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+            >
+              <option value="">Select frequency</option>
+              <option value="Once daily">Once daily</option>
+              <option value="Twice daily">Twice daily</option>
+              <option value="Three times daily">Three times daily</option>
+              <option value="Four times daily">Four times daily</option>
+              <option value="Every 4 hours">Every 4 hours</option>
+              <option value="Every 6 hours">Every 6 hours</option>
+              <option value="Every 8 hours">Every 8 hours</option>
+              <option value="Every 12 hours">Every 12 hours</option>
+              <option value="Before meals">Before meals</option>
+              <option value="After meals">After meals</option>
+              <option value="At bedtime">At bedtime</option>
+              <option value="As needed">As needed</option>
+              <option value="custom">Custom (type below)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Custom Frequency (shown when "custom" is selected) -->
+        <div id="custom-frequency-container" class="hidden">
+          <label class="block text-sm font-semibold text-gray-900 mb-2">
+            Custom Frequency
+          </label>
+          <input 
+            type="text" 
+            id="rx-frequency-custom" 
+            placeholder="Specify custom frequency..."
+            class="w-full px-4 py-3 bg-white rounded-lg border-2 border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+          />
+        </div>
+
+        <!-- Duration -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-900 mb-2">
+            Duration
+          </label>
+          <div class="grid grid-cols-2 gap-3">
+            <input 
+              type="number" 
+              id="rx-duration-value" 
+              min="1"
+              placeholder="Number"
+              class="px-4 py-3 bg-white rounded-lg border-2 border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+            />
+            <select 
+              id="rx-duration-unit"
+              class="px-4 py-3 bg-white rounded-lg border-2 border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+            >
+              <option value="days">Days</option>
+              <option value="weeks">Weeks</option>
+              <option value="months">Months</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="relative">
+          <label class="block text-sm font-semibold text-gray-900 mb-2">
+            Special Instructions
+            <span class="text-xs text-gray-500 font-normal ml-2">
+              Type <code class="bg-gray-100 px-1 rounded">#</code> to reference medical history or prescriptions
+            </span>
+          </label>
+          <textarea 
+            id="rx-instructions" 
+            rows="3"
+            placeholder="Additional instructions (e.g., take with food, avoid alcohol, etc.)..."
+            class="w-full px-4 py-3 bg-white rounded-lg border-2 border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all resize-none"
+          ></textarea>
+          
+          <!-- Autocomplete Dropdown -->
+          <div id="rx-autocomplete" class="hidden absolute z-50 w-full mt-1 bg-white border-2 border-green-500 rounded-lg shadow-xl max-h-64 overflow-y-auto">
+            <!-- Autocomplete items will be inserted here -->
+          </div>
+        </div>
+
+        <!-- Status -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-900 mb-2">
+            Status
+          </label>
+          <select 
+            id="rx-status"
+            class="w-full px-4 py-3 bg-white rounded-lg border-2 border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+          >
+            <option value="active" selected>Active</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-3 pt-4">
+          <button 
+            type="button" 
+            id="cancel-prescription-btn"
+            class="flex-1 px-6 py-3 rounded-lg border-2 border-gray-300 hover:bg-gray-50 font-semibold text-gray-700 transition-all"
+          >
+            Cancel
+          </button>
+          <button 
+            type="submit"
+            class="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-lg hover:from-green-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl font-semibold"
+          >
+            <i class="fas fa-prescription-bottle mr-2"></i>
+            Create Prescription
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+  #prescription-modal {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  #prescription-modal-content {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), 
+                opacity 0.3s ease-out;
+  }
+</style>

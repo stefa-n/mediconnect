@@ -1,0 +1,39 @@
+---
+interface Props {
+  message?: string;
+}
+
+const { message = 'Loading...' } = Astro.props;
+---
+
+<div class="flex items-center justify-center min-h-screen">
+  <div class="relative">
+    <div class="flex flex-col items-center space-y-6">
+      <div class="relative">
+        <div class="absolute inset-0 w-24 h-24 rounded-full bg-primary/20 animate-ping"></div>
+        <div class="absolute inset-2 w-20 h-20 rounded-full bg-primary/30 animate-pulse"></div>
+        <div class="relative w-24 h-24 bg-gradient-to-br from-primary to-blue-600 rounded-full flex items-center justify-center shadow-2xl">
+          <i class="fas fa-shield-alt text-white text-4xl animate-pulse"></i>
+        </div>
+      </div>
+      <div class="text-center">
+        <h2 class="text-2xl font-bold text-foreground mb-2">MediConnect</h2>
+        <p class="text-muted-foreground text-sm mb-4">{message}</p>
+        <div class="w-48 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+          <div class="h-full bg-gradient-to-r from-primary to-blue-600 rounded-full animate-progress"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes progress {
+    0% { width: 0%; }
+    100% { width: 100%; }
+  }
+
+  .animate-progress {
+    animation: progress 1.5s ease-in-out infinite;
+  }
+</style>

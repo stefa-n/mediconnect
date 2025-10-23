@@ -1,0 +1,33 @@
+<!-- Confirmation Modal -->
+<div id="confirm-modal" class="hidden fixed inset-0 bg-black/50 z-50 items-center justify-center p-4" style="backdrop-filter: blur(8px);">
+  <div id="confirm-modal-content" class="bg-card rounded-xl border border-border p-6 max-w-md w-full scale-95 opacity-0 transition-all duration-200">
+    <div class="flex items-start gap-4 mb-6">
+      <div id="confirm-icon" class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-question-circle text-2xl"></i>
+      </div>
+      <div class="flex-1">
+        <h3 id="confirm-title" class="text-lg font-semibold text-foreground mb-2">Confirm Action</h3>
+        <p id="confirm-message" class="text-sm text-muted-foreground"></p>
+      </div>
+    </div>
+    <div class="flex gap-3 justify-end">
+      <button id="confirm-cancel-btn" class="px-4 py-2 border border-border rounded-lg hover:bg-accent transition-colors">
+        Cancel
+      </button>
+      <button id="confirm-action-btn" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+        Confirm
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  #confirm-modal {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  #confirm-modal-content {
+    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+  }
+</style>

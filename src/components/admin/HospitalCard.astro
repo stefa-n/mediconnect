@@ -1,0 +1,125 @@
+---
+interface Props {
+  hospitalId: string;
+  hospitalName: string;
+  hospitalAddress?: string;
+  hospitalPhone?: string;
+  hospitalEmail?: string;
+}
+
+const { hospitalId, hospitalName, hospitalAddress, hospitalPhone, hospitalEmail } = Astro.props;
+---
+
+<div class="bg-card rounded-lg border border-border overflow-hidden" data-hospital-id={hospitalId}>
+  <!-- Hospital Header -->
+  <button 
+    class="hospital-toggle w-full p-4 flex items-center justify-between hover:bg-accent transition-colors cursor-pointer"
+    data-hospital-id={hospitalId}
+  >
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+        <i class="fas fa-hospital text-primary"></i>
+      </div>
+      <div class="text-left">
+        <h3 class="font-semibold text-foreground">{hospitalName}</h3>
+        {hospitalAddress && (
+          <p class="text-sm text-muted-foreground">{hospitalAddress}</p>
+        )}
+      </div>
+    </div>
+    
+    <div class="flex items-center gap-3">
+      <i class="fas fa-chevron-right text-muted-foreground transition-transform duration-300" data-arrow={hospitalId}></i>
+    </div>
+  </button>
+
+  <!-- Hospital Details (Collapsible) -->
+  <div class="hospital-details hidden" data-details={hospitalId}>
+    <!-- Skeleton Loader -->
+    <div class="hospital-skeleton p-4 space-y-3" data-skeleton={hospitalId}>
+      <div class="h-4 bg-muted rounded shimmer"></div>
+      <div class="h-4 bg-muted rounded w-3/4 shimmer"></div>
+      <div class="h-4 bg-muted rounded w-1/2 shimmer"></div>
+    </div>
+
+    <!-- Actual Content -->
+    <div class="hospital-content hidden opacity-0 transition-opacity duration-300" data-content={hospitalId}>
+      <div class="p-4 bg-accent/50 space-y-3">
+        {hospitalPhone && (
+          <div class="flex items-center gap-2 text-sm">
+            <i class="fas fa-phone text-muted-foreground"></i>
+            <span class="text-foreground">{hospitalPhone}</span>
+          </div>
+        )}
+        {hospitalEmail && (
+          <div class="flex items-center gap-2 text-sm">
+            <i class="fas fa-envelope text-muted-foreground"></i>
+            <span class="text-foreground">{hospitalEmail}</span>
+          </div>
+        )}
+        
+        <div class="flex gap-2 pt-2">
+          <button 
+            class="edit-hospital-btn flex-1 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm"
+            data-hospital-id={hospitalId}
+          >
+            <i class="fas fa-edit mr-2"></i>
+            Edit
+          </button>
+          <button 
+            class="delete-hospital-btn flex-1 px-3 py-2 border border-destructive text-destructive rounded-lg hover:bg-destructive/10 transition-colors text-sm"
+            data-hospital-id={hospitalId}
+          >
+            <i class="fas fa-trash mr-2"></i>
+            Delete
+          </button>
+        </div>
+
+        <!-- Hospital Admins -->
+        <div class="hospital-admins mt-4" data-admins={hospitalId}>
+          <h4 class="text-sm font-semibold text-foreground mb-2">Hospital Administrators</h4>
+          <div class="hospital-admins-list space-y-2" data-admins-list={hospitalId}>
+            <!-- Admin items will be dynamically loaded -->
+          </div>
+        </div>
+
+        <!-- Hospital Stats -->
+        <div class="grid grid-cols-3 gap-3 mt-4">
+          <div class="bg-card p-3 rounded-lg border border-border text-center">
+            <div class="text-2xl font-bold text-primary" data-stat={`${hospitalId}-admins`}>0</div>
+            <div class="text-xs text-muted-foreground">Admins</div>
+          </div>
+          <div class="bg-card p-3 rounded-lg border border-border text-center">
+            <div class="text-2xl font-bold text-primary" data-stat={`${hospitalId}-medics`}>0</div>
+            <div class="text-xs text-muted-foreground">Medics</div>
+          </div>
+          <div class="bg-card p-3 rounded-lg border border-border text-center">
+            <div class="text-2xl font-bold text-primary" data-stat={`${hospitalId}-patients`}>0</div>
+            <div class="text-xs text-muted-foreground">Patients</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  .shimmer {
+    background: linear-gradient(90deg, 
+      hsl(var(--muted)) 0%, 
+      hsl(var(--muted-foreground) / 0.1) 50%, 
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+</style>

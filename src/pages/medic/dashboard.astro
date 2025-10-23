@@ -2,6 +2,9 @@
 import MainLayout from '../../layouts/main.astro';
 import Navbar from '../../components/Navbar.astro';
 import StatsCard from '../../components/dashboard/StatsCard.astro';
+import PatientDetailsModal from '../../components/medic/PatientDetailsModal.astro';
+import MedicalRecordForm from '../../components/medic/MedicalRecordForm.astro';
+import PrescriptionForm from '../../components/medic/PrescriptionForm.astro';
 
 // Pass placeholder user for navbar (will be updated client-side)
 const placeholderUser = { email: 'loading@example.com' };
@@ -43,25 +46,25 @@ const placeholderUser = { email: 'loading@example.com' };
     </div>
 
     <!-- Custom Toast Notifications -->
-    <div id="toast-container" class="fixed top-4 right-4 z-[100] space-y-3 pointer-events-none">
+    <div id="toast-container" class="fixed top-4 right-4 z-[110] space-y-3 pointer-events-none">
       <!-- Toasts will be dynamically inserted here -->
     </div>
 
     <!-- Custom Confirmation Modal -->
-    <div id="confirm-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] p-4" style="display: none; align-items: center; justify-content: center;">
+    <div id="confirm-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4" style="display: none;">
       <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all scale-95 opacity-0" id="confirm-modal-content">
-        <div class="p-6">
+        <div class="p-4">
           <div class="flex items-start gap-4">
             <div id="confirm-icon" class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center">
               <i class="fas fa-question-circle text-2xl"></i>
             </div>
-            <div class="flex-1">
-              <h3 id="confirm-title" class="text-xl font-bold text-gray-900 mb-2"></h3>
-              <p id="confirm-message" class="text-gray-600 text-sm leading-relaxed whitespace-pre-line"></p>
+            <div class="flex-1 min-w-0">
+              <h3 id="confirm-title" class="text-lg font-bold text-gray-900 mb-1"></h3>
+              <p id="confirm-message" class="text-gray-600 text-sm leading-snug whitespace-pre-line"></p>
             </div>
           </div>
         </div>
-        <div class="px-6 pb-6 flex gap-3">
+        <div class="px-4 pb-4 flex gap-3 sticky bottom-0 bg-white">
           <button 
             id="confirm-cancel-btn"
             class="flex-1 px-4 py-2.5 rounded-lg border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 font-medium text-gray-700 transition-all"
@@ -136,18 +139,43 @@ const placeholderUser = { email: 'loading@example.com' };
         />
       </div>
 
-      <!-- Today's Schedule -->
-      <div class="mb-8">
-        <div class="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
-          <div class="p-6 border-b border-border bg-gradient-to-r from-green-50 to-teal-50">
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="text-xl font-bold text-foreground flex items-center gap-2">
-                  <i class="fas fa-calendar-day text-green-600"></i>
-                  Today's Schedule
-                </h3>
-                <p class="text-sm text-muted-foreground mt-1" id="today-date">Loading...</p>
+      <!-- Schedule Section: Today's Schedule (2/3) + Urgent Appointments (1/3) -->
+      <div class="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Today's Schedule (2/3 width) -->
+        <div class="lg:col-span-2">
+          <div class="bg-card rounded-xl shadow-lg border border-border overflow-hidden h-full">
+            <div class="p-6 border-b border-border bg-gradient-to-r from-green-50 to-teal-50">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h3 class="text-xl font-bold text-foreground flex items-center gap-2">
+                    <i class="fas fa-calendar-day text-green-600"></i>
+                    Schedule
+                  </h3>
+                  <p class="text-sm text-muted-foreground mt-1" id="today-date">Loading...</p>
+                </div>
               </div>
+              
+              <!-- Toggle Switch: Today vs Upcoming -->
+              <div class="flex items-center gap-3 bg-white rounded-lg p-1 shadow-sm border border-gray-200 w-fit">
+                <button 
+                  id="today-btn"
+                  class="schedule-toggle-btn active px-4 py-2 rounded-md text-sm font-medium transition-all bg-gradient-to-r from-green-600 to-teal-600 text-white shadow-lg"
+                >
+                  <i class="fas fa-calendar-day mr-2"></i>
+                  Today
+                </button>
+                <button 
+                  id="upcoming-btn"
+                  class="schedule-toggle-btn px-4 py-2 rounded-md text-sm font-medium transition-all text-gray-600 hover:bg-gray-100"
+                >
+                  <i class="fas fa-clock mr-2"></i>
+                  Upcoming
+                </button>
+              </div>
+            </div>
+            
+            <!-- Status Filter -->
+            <div class="px-6 pt-4 pb-2 border-b border-border bg-gray-50/50">
               <div class="flex gap-2">
                 <button class="schedule-filter-btn active px-3 py-1.5 rounded-lg text-sm font-medium transition-all" data-filter="all">
                   All
@@ -160,9 +188,32 @@ const placeholderUser = { email: 'loading@example.com' };
                 </button>
               </div>
             </div>
+
+            <!-- Today's Schedule Content -->
+            <div id="today-schedule" class="p-6">
+              <!-- Today's appointments will be rendered here -->
+            </div>
+
+            <!-- Upcoming Appointments Content (Hidden by default) -->
+            <div id="upcoming-appointments" class="p-6 hidden">
+              <!-- Upcoming appointments will be rendered here -->
+            </div>
           </div>
-          <div id="today-schedule" class="p-6">
-            <!-- Today's appointments will be rendered here -->
+        </div>
+
+        <!-- Urgent Appointments (1/3 width) -->
+        <div class="lg:col-span-1">
+          <div class="bg-card rounded-xl shadow-lg border border-red-200 overflow-hidden h-full">
+            <div class="p-6 border-b border-red-200 bg-gradient-to-r from-red-50 to-orange-50">
+              <h3 class="text-xl font-bold text-foreground flex items-center gap-2">
+                <i class="fas fa-exclamation-triangle text-red-600"></i>
+                Urgent
+              </h3>
+              <p class="text-sm text-muted-foreground mt-1">High priority appointments</p>
+            </div>
+            <div id="urgent-appointments" class="p-6">
+              <!-- Urgent appointments will be rendered here -->
+            </div>
           </div>
         </div>
       </div>
@@ -191,52 +242,44 @@ const placeholderUser = { email: 'loading@example.com' };
         </div>
       </div>
 
-      <!-- All Patients -->
+      <!-- Patient Search -->
       <div class="mb-8">
         <div class="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
           <div class="p-6 border-b border-border bg-gradient-to-r from-blue-50 to-purple-50">
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="text-xl font-bold text-foreground flex items-center gap-2">
-                  <i class="fas fa-users text-blue-600"></i>
-                  Your Patients
-                </h3>
-                <p class="text-sm text-muted-foreground mt-1">Patients you've treated</p>
-              </div>
-              <div class="relative">
-                <input 
-                  type="text" 
-                  id="patient-search"
-                  class="px-4 py-2 pr-10 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-                  placeholder="Search patients..."
-                />
-                <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-              </div>
+            <h3 class="text-xl font-bold text-foreground flex items-center gap-2 mb-4">
+              <i class="fas fa-search text-blue-600"></i>
+              Patient Search
+            </h3>
+            <div class="relative">
+              <input 
+                type="text" 
+                id="patient-search"
+                class="w-full px-4 py-3 pr-12 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                placeholder="Search patients by name or email..."
+              />
+              <i class="fas fa-search absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
             </div>
+            <p class="text-sm text-muted-foreground mt-2">
+              <i class="fas fa-info-circle mr-1"></i>
+              Search and click on a patient to view their complete medical history
+            </p>
           </div>
           <div id="patients-list" class="p-6">
-            <!-- Patients will be rendered here -->
-          </div>
-        </div>
-      </div>
-
-      <!-- Upcoming Appointments -->
-      <div class="mb-8">
-        <div class="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
-          <div class="p-6 border-b border-border bg-gradient-to-r from-purple-50 to-pink-50">
-            <h3 class="text-xl font-bold text-foreground flex items-center gap-2">
-              <i class="fas fa-clock text-purple-600"></i>
-              Upcoming Appointments
-            </h3>
-            <p class="text-sm text-muted-foreground mt-1">Your scheduled appointments</p>
-          </div>
-          <div id="upcoming-appointments" class="p-6">
-            <!-- Upcoming appointments will be rendered here -->
+            <!-- Patient search results will be rendered here -->
           </div>
         </div>
       </div>
     </main>
   </div>
+
+  <!-- Patient Details Modal -->
+  <PatientDetailsModal />
+
+  <!-- Medical Record Form -->
+  <MedicalRecordForm />
+
+  <!-- Prescription Form -->
+  <PrescriptionForm />
 
   <!-- Appointment Details Modal -->
   <div id="appointment-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 p-4" style="display: none; align-items: center; justify-content: center;">
@@ -360,6 +403,7 @@ const placeholderUser = { email: 'loading@example.com' };
     let patientsData: any[] = [];
     let appointmentRequests: any[] = [];
     let currentFilter: string = 'all';
+    let currentUser: any = null;
 
     // Custom Toast Notification System
     type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -448,13 +492,31 @@ const placeholderUser = { email: 'loading@example.com' };
 
         const config = configs[type];
         
+        // Hide icon for info type (used for reference details)
+        if (type === 'info') {
+          iconEl.style.display = 'none';
+          modalContent.classList.remove('max-w-md');
+          modalContent.classList.add('max-w-2xl');
+        } else {
+          iconEl.style.display = '';
+          modalContent.classList.remove('max-w-2xl');
+          modalContent.classList.add('max-w-md');
+        }
+        
         iconEl.className = `flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${config.iconBg}`;
         iconEl.querySelector('i')!.className = `fas ${config.icon} text-2xl`;
         titleEl.textContent = title;
-        messageEl.textContent = message;
+        messageEl.innerHTML = message; // Use innerHTML to support HTML content
         confirmBtn.textContent = options.confirmText || 'Confirm';
         confirmBtn.className = `flex-1 px-4 py-2.5 rounded-lg font-medium text-white transition-all shadow-lg hover:shadow-xl transform hover:scale-105 ${config.btnBg}`;
-        cancelBtn.textContent = options.cancelText || 'Cancel';
+        
+        // Handle cancel button visibility
+        if (options.cancelText === '') {
+          cancelBtn.style.display = 'none';
+        } else {
+          cancelBtn.style.display = '';
+          cancelBtn.textContent = options.cancelText || 'Cancel';
+        }
         
         modal.style.display = 'flex';
         modal.classList.remove('hidden');
@@ -591,6 +653,9 @@ const placeholderUser = { email: 'loading@example.com' };
           return;
         }
 
+        // Store current user globally
+        currentUser = user;
+
         // Get user profile and verify they're a medic
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
@@ -724,15 +789,14 @@ const placeholderUser = { email: 'loading@example.com' };
         
         renderTodaySchedule();
         renderUpcomingAppointments();
-        extractPatients();
-        renderTodaySchedule();
-        renderUpcomingAppointments();
+        renderUrgentAppointments();
         extractPatients();
       } catch (error) {
         console.error('Error loading appointments:', error);
         appointmentsData = [];
         renderTodaySchedule();
         renderUpcomingAppointments();
+        renderUrgentAppointments();
         extractPatients();
       }
     }
@@ -839,35 +903,7 @@ const placeholderUser = { email: 'loading@example.com' };
 
       container.innerHTML = `
         <div class="space-y-3">
-          ${todayAppts.map(apt => `
-            <div class="appointment-card flex items-center justify-between p-4 rounded-lg border border-border hover:bg-accent/50 transition-all cursor-pointer"
-                 data-appointment-id="${apt.id}">
-              <div class="flex items-center gap-4 flex-1">
-                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center text-white font-semibold text-lg">
-                  ${apt.patients?.full_name?.charAt(0).toUpperCase() || 'P'}
-                </div>
-                <div class="flex-1">
-                  <p class="font-semibold text-foreground">${apt.patients?.full_name || 'Patient'}</p>
-                  <p class="text-sm text-muted-foreground">${apt.patients?.email || ''}</p>
-                  <p class="text-xs text-muted-foreground mt-1">
-                    <i class="fas fa-clock mr-1"></i>
-                    ${new Date(apt.appointment_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                    ${apt.reason ? `<span class="mx-2">•</span><i class="fas fa-notes-medical mr-1"></i>${apt.reason}` : ''}
-                  </p>
-                </div>
-              </div>
-              <div class="flex items-center gap-3">
-                <span class="px-3 py-1 rounded-full text-xs font-medium ${
-                  apt.status === 'completed' ? 'bg-green-100 text-green-700' :
-                  apt.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                  'bg-blue-100 text-blue-700'
-                }">
-                  ${apt.status || 'scheduled'}
-                </span>
-                <i class="fas fa-chevron-right text-gray-400"></i>
-              </div>
-            </div>
-          `).join('')}
+          ${todayAppts.map(apt => renderAppointmentCard(apt, true)).join('')}
         </div>
       `;
 
@@ -881,6 +917,57 @@ const placeholderUser = { email: 'loading@example.com' };
       });
     }
 
+    function renderAppointmentCard(apt: any, showTime: boolean = false) {
+      const severityColors = {
+        urgent: 'bg-red-100 text-red-700 border-red-200',
+        high: 'bg-orange-100 text-orange-700 border-orange-200',
+        normal: 'bg-blue-100 text-blue-700 border-blue-200',
+        low: 'bg-gray-100 text-gray-700 border-gray-200'
+      };
+      
+      const severity = apt.severity || 'normal';
+      const severityColor = severityColors[severity as keyof typeof severityColors] || severityColors.normal;
+
+      return `
+        <div class="appointment-card flex items-center justify-between p-4 rounded-lg border border-border hover:bg-accent/50 transition-all cursor-pointer"
+             data-appointment-id="${apt.id}">
+          <div class="flex items-center gap-4 flex-1">
+            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center text-white font-semibold text-lg">
+              ${apt.patients?.full_name?.charAt(0).toUpperCase() || 'P'}
+            </div>
+            <div class="flex-1">
+              <p class="font-semibold text-foreground">${apt.patients?.full_name || 'Patient'}</p>
+              <p class="text-sm text-muted-foreground">${apt.patients?.email || ''}</p>
+              <p class="text-xs text-muted-foreground mt-1">
+                <i class="fas fa-clock mr-1"></i>
+                ${showTime 
+                  ? new Date(apt.appointment_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                  : new Date(apt.appointment_date).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                }
+                ${apt.reason ? `<span class="mx-2">•</span><i class="fas fa-notes-medical mr-1"></i>${apt.reason}` : ''}
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            ${severity !== 'normal' ? `
+              <span class="px-2 py-1 rounded-full text-xs font-medium border ${severityColor}">
+                <i class="fas ${severity === 'urgent' ? 'fa-exclamation-circle' : severity === 'high' ? 'fa-exclamation-triangle' : 'fa-info-circle'} mr-1"></i>
+                ${severity}
+              </span>
+            ` : ''}
+            <span class="px-3 py-1 rounded-full text-xs font-medium ${
+              apt.status === 'completed' ? 'bg-green-100 text-green-700' :
+              apt.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+              'bg-blue-100 text-blue-700'
+            }">
+              ${apt.status || 'scheduled'}
+            </span>
+            <i class="fas fa-chevron-right text-gray-400"></i>
+          </div>
+        </div>
+      `;
+    }
+
     function renderUpcomingAppointments() {
       const container = document.getElementById('upcoming-appointments');
       if (!container) return;
@@ -888,9 +975,15 @@ const placeholderUser = { email: 'loading@example.com' };
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      const upcoming = appointmentsData
-        .filter(a => new Date(a.appointment_date) > today && a.status !== 'cancelled')
-        .slice(0, 10);
+      let upcoming = appointmentsData
+        .filter(a => new Date(a.appointment_date) > today && a.status !== 'cancelled');
+      
+      // Apply filter
+      if (currentFilter !== 'all') {
+        upcoming = upcoming.filter(a => a.status === currentFilter);
+      }
+
+      upcoming = upcoming.slice(0, 10);
 
       if (upcoming.length === 0) {
         container.innerHTML = `
@@ -905,16 +998,68 @@ const placeholderUser = { email: 'loading@example.com' };
 
       container.innerHTML = `
         <div class="space-y-3">
-          ${upcoming.map(apt => `
-            <div class="appointment-card flex items-center justify-between p-4 rounded-lg border border-border hover:bg-accent/50 transition-all cursor-pointer"
+          ${upcoming.map(apt => renderAppointmentCard(apt, false)).join('')}
+        </div>
+      `;
+
+      // Attach click listeners
+      document.querySelectorAll('#upcoming-appointments .appointment-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+          const id = (e.currentTarget as HTMLElement).dataset.appointmentId;
+          const apt = appointmentsData.find(a => a.id === id);
+          if (apt) showAppointmentDetails(apt);
+        });
+      });
+    }
+
+    function renderUrgentAppointments() {
+      const container = document.getElementById('urgent-appointments');
+      if (!container) return;
+
+      const urgent = appointmentsData
+        .filter(a => (a.severity === 'urgent' || a.severity === 'high') && a.status !== 'cancelled' && a.status !== 'completed')
+        .sort((a, b) => {
+          // Sort by severity first (urgent > high), then by date
+          if (a.severity === 'urgent' && b.severity !== 'urgent') return -1;
+          if (b.severity === 'urgent' && a.severity !== 'urgent') return 1;
+          return new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime();
+        })
+        .slice(0, 8); // Limit to 8 items for the sidebar
+
+      if (urgent.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-8 text-muted-foreground">
+            <i class="fas fa-check-circle text-4xl mb-3 opacity-50"></i>
+            <p class="text-sm font-medium mb-1">No urgent cases</p>
+            <p class="text-xs">All clear!</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="space-y-2">
+          ${urgent.map(apt => `
+            <div class="appointment-card p-3 rounded-lg border-2 ${
+              apt.severity === 'urgent' ? 'border-red-300 bg-red-50/50 hover:bg-red-50' : 'border-orange-300 bg-orange-50/50 hover:bg-orange-50'
+            } transition-all cursor-pointer"
                  data-appointment-id="${apt.id}">
-              <div class="flex items-center gap-4 flex-1">
-                <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
-                  <i class="fas fa-calendar"></i>
+              <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-full ${
+                  apt.severity === 'urgent' ? 'bg-gradient-to-br from-red-600 to-red-700' : 'bg-gradient-to-br from-orange-600 to-orange-700'
+                } flex items-center justify-center text-white font-semibold flex-shrink-0">
+                  ${apt.patients?.full_name?.charAt(0).toUpperCase() || 'P'}
                 </div>
-                <div class="flex-1">
-                  <p class="font-semibold text-foreground">${apt.patients?.full_name || 'Patient'}</p>
-                  <p class="text-sm text-muted-foreground">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 mb-1">
+                    <p class="font-semibold text-foreground text-sm truncate">${apt.patients?.full_name || 'Patient'}</p>
+                    <span class="px-2 py-0.5 rounded-full text-xs font-bold ${
+                      apt.severity === 'urgent' ? 'bg-red-200 text-red-800' : 'bg-orange-200 text-orange-800'
+                    }">
+                      <i class="fas ${apt.severity === 'urgent' ? 'fa-exclamation-circle' : 'fa-exclamation-triangle'}"></i>
+                    </span>
+                  </div>
+                  <p class="text-xs text-muted-foreground">
                     <i class="fas fa-clock mr-1"></i>
                     ${new Date(apt.appointment_date).toLocaleString('en-US', { 
                       month: 'short', 
@@ -923,17 +1068,16 @@ const placeholderUser = { email: 'loading@example.com' };
                       minute: '2-digit' 
                     })}
                   </p>
-                  ${apt.reason ? `<p class="text-xs text-muted-foreground mt-1"><i class="fas fa-notes-medical mr-1"></i>${apt.reason}</p>` : ''}
+                  ${apt.reason ? `<p class="text-xs text-muted-foreground mt-1 truncate"><i class="fas fa-notes-medical mr-1"></i>${apt.reason}</p>` : ''}
                 </div>
               </div>
-              <i class="fas fa-chevron-right text-gray-400"></i>
             </div>
           `).join('')}
         </div>
       `;
 
       // Attach click listeners
-      document.querySelectorAll('.appointment-card').forEach(card => {
+      document.querySelectorAll('#urgent-appointments .appointment-card').forEach(card => {
         card.addEventListener('click', (e) => {
           const id = (e.currentTarget as HTMLElement).dataset.appointmentId;
           const apt = appointmentsData.find(a => a.id === id);
@@ -969,7 +1113,7 @@ const placeholderUser = { email: 'loading@example.com' };
       container.innerHTML = `
         <div class="grid md:grid-cols-2 gap-4">
           ${filteredPatients.map(patient => `
-            <div class="patient-card p-4 rounded-lg border border-border hover:bg-accent/50 transition-all">
+            <div class="patient-card p-4 rounded-lg border border-border hover:bg-accent/50 transition-all cursor-pointer" data-patient-id="${patient.id}" onclick="showPatientDetails('${patient.id}')">
               <div class="flex items-start gap-3">
                 <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
                   ${patient.full_name?.charAt(0).toUpperCase() || 'P'}
@@ -1591,6 +1735,1050 @@ const placeholderUser = { email: 'loading@example.com' };
       renderPatients(query);
     });
 
+    // ============================================
+    // PATIENT DETAILS MODAL FUNCTIONS
+    // ============================================
+    
+    let currentPatientId: string | null = null;
+
+    // ============================================
+    // AUTOCOMPLETE FUNCTIONALITY FOR # REFERENCES
+    // ============================================
+
+    interface AutocompleteItem {
+      id: string;
+      type: 'prescription' | 'medical_history';
+      title: string;
+      subtitle: string;
+      insertText: string;
+    }
+
+    function setupAutocomplete(textareaId: string, dropdownId: string, patientId: string) {
+      const textarea = document.getElementById(textareaId) as HTMLTextAreaElement;
+      const dropdown = document.getElementById(dropdownId);
+      
+      if (!textarea || !dropdown) return;
+
+      let autocompleteItems: AutocompleteItem[] = [];
+      let selectedIndex = -1;
+
+      // Load data for autocomplete
+      async function loadAutocompleteData() {
+        try {
+          // Fetch prescriptions
+          const { data: prescriptions } = await supabase
+            .from('prescriptions')
+            .select('*')
+            .eq('patient_id', patientId)
+            .eq('medic_id', currentUser.id)
+            .order('prescribed_date', { ascending: false })
+            .limit(20);
+
+          // Fetch medical history
+          const { data: history } = await supabase
+            .from('medical_history')
+            .select('*')
+            .eq('patient_id', patientId)
+            .eq('medic_id', currentUser.id)
+            .order('visit_date', { ascending: false })
+            .limit(20);
+
+          autocompleteItems = [];
+
+          // Add prescriptions
+          prescriptions?.forEach(rx => {
+            autocompleteItems.push({
+              id: rx.id,
+              type: 'prescription',
+              title: `💊 ${rx.medication_name}`,
+              subtitle: `${rx.dosage} - ${rx.frequency}`,
+              insertText: `#rx-${rx.id} (${rx.medication_name} ${rx.dosage})`
+            });
+          });
+
+          // Add medical history
+          history?.forEach(record => {
+            const date = new Date(record.visit_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            autocompleteItems.push({
+              id: record.id,
+              type: 'medical_history',
+              title: `📋 ${record.diagnosis}`,
+              subtitle: date,
+              insertText: `#history-${record.id} (${record.diagnosis})`
+            });
+          });
+
+        } catch (error) {
+          console.error('Error loading autocomplete data:', error);
+        }
+      }
+
+      // Initial data load
+      loadAutocompleteData();
+
+      textarea.addEventListener('input', (e) => {
+        const target = e.target as HTMLTextAreaElement;
+        const cursorPos = target.selectionStart;
+        const textBeforeCursor = target.value.substring(0, cursorPos);
+        
+        // Check if # was just typed
+        const hashMatch = textBeforeCursor.match(/#(\w*)$/);
+        
+        if (hashMatch) {
+          const searchTerm = hashMatch[1].toLowerCase();
+          const filteredItems = autocompleteItems.filter(item =>
+            item.title.toLowerCase().includes(searchTerm) ||
+            item.subtitle.toLowerCase().includes(searchTerm)
+          );
+
+          if (filteredItems.length > 0) {
+            showAutocompleteDropdown(filteredItems, dropdown, textarea);
+            selectedIndex = -1;
+          } else {
+            hideAutocompleteDropdown(dropdown);
+          }
+        } else {
+          hideAutocompleteDropdown(dropdown);
+        }
+      });
+
+      textarea.addEventListener('keydown', (e) => {
+        if (dropdown.classList.contains('hidden')) return;
+
+        const items = dropdown.querySelectorAll('.autocomplete-item');
+        
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+          updateSelection(items, selectedIndex);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          selectedIndex = Math.max(selectedIndex - 1, 0);
+          updateSelection(items, selectedIndex);
+        } else if (e.key === 'Enter' && selectedIndex >= 0) {
+          e.preventDefault();
+          (items[selectedIndex] as HTMLElement).click();
+        } else if (e.key === 'Escape') {
+          hideAutocompleteDropdown(dropdown);
+        }
+      });
+
+      // Close dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!textarea.contains(e.target as Node) && !dropdown.contains(e.target as Node)) {
+          hideAutocompleteDropdown(dropdown);
+        }
+      });
+    }
+
+    function showAutocompleteDropdown(items: AutocompleteItem[], dropdown: HTMLElement, textarea: HTMLTextAreaElement) {
+      dropdown.innerHTML = items.map((item, index) => `
+        <div class="autocomplete-item px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors" data-index="${index}">
+          <div class="font-medium text-gray-900">${item.title}</div>
+          <div class="text-sm text-gray-600">${item.subtitle}</div>
+        </div>
+      `).join('');
+
+      // Position dropdown at cursor position
+      positionDropdownAtCursor(textarea, dropdown);
+
+      dropdown.classList.remove('hidden');
+
+      // Add click handlers
+      dropdown.querySelectorAll('.autocomplete-item').forEach((el, index) => {
+        el.addEventListener('click', () => {
+          insertAutocompleteItem(textarea, items[index]);
+          hideAutocompleteDropdown(dropdown);
+        });
+      });
+    }
+
+    function positionDropdownAtCursor(textarea: HTMLTextAreaElement, dropdown: HTMLElement) {
+      // Create a mirror div to calculate cursor position
+      const mirror = document.createElement('div');
+      const styles = window.getComputedStyle(textarea);
+      
+      // Copy textarea styles to mirror
+      [
+        'fontFamily', 'fontSize', 'fontWeight', 'letterSpacing', 
+        'lineHeight', 'padding', 'border', 'width'
+      ].forEach(prop => {
+        (mirror.style as any)[prop] = (styles as any)[prop];
+      });
+
+      mirror.style.position = 'absolute';
+      mirror.style.visibility = 'hidden';
+      mirror.style.whiteSpace = 'pre-wrap';
+      mirror.style.wordWrap = 'break-word';
+      mirror.style.overflow = 'hidden';
+      
+      document.body.appendChild(mirror);
+
+      // Get text before cursor
+      const textBeforeCursor = textarea.value.substring(0, textarea.selectionStart);
+      mirror.textContent = textBeforeCursor;
+
+      // Add a span at cursor position to measure
+      const cursorSpan = document.createElement('span');
+      cursorSpan.textContent = '|';
+      mirror.appendChild(cursorSpan);
+
+      // Get textarea position
+      const textareaRect = textarea.getBoundingClientRect();
+      const cursorSpanRect = cursorSpan.getBoundingClientRect();
+      const mirrorRect = mirror.getBoundingClientRect();
+
+      // Calculate position relative to textarea
+      const relativeTop = cursorSpanRect.top - mirrorRect.top + parseInt(styles.paddingTop);
+      const relativeLeft = cursorSpanRect.left - mirrorRect.left + parseInt(styles.paddingLeft);
+
+      // Position dropdown
+      const lineHeight = parseInt(styles.lineHeight);
+      dropdown.style.position = 'absolute';
+      dropdown.style.top = `${relativeTop + lineHeight + 8}px`;
+      dropdown.style.left = `${relativeLeft}px`;
+      dropdown.style.minWidth = '300px';
+      dropdown.style.maxWidth = '500px';
+
+      // Clean up
+      document.body.removeChild(mirror);
+    }
+
+    function hideAutocompleteDropdown(dropdown: HTMLElement) {
+      dropdown.classList.add('hidden');
+      dropdown.innerHTML = '';
+    }
+
+    function updateSelection(items: NodeListOf<Element>, selectedIndex: number) {
+      items.forEach((item, index) => {
+        if (index === selectedIndex) {
+          item.classList.add('bg-blue-50');
+          item.scrollIntoView({ block: 'nearest' });
+        } else {
+          item.classList.remove('bg-blue-50');
+        }
+      });
+    }
+
+    function insertAutocompleteItem(textarea: HTMLTextAreaElement, item: AutocompleteItem) {
+      const cursorPos = textarea.selectionStart;
+      const textBefore = textarea.value.substring(0, cursorPos);
+      const textAfter = textarea.value.substring(cursorPos);
+      
+      // Remove the # and any text after it up to cursor
+      const beforeHash = textBefore.replace(/#\w*$/, '');
+      
+      // Insert the reference text
+      textarea.value = beforeHash + item.insertText + ' ' + textAfter;
+      
+      // Set cursor position after inserted text
+      const newCursorPos = beforeHash.length + item.insertText.length + 1;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+      textarea.focus();
+    }
+
+    // ============================================
+    // LINKIFY REFERENCES IN TEXT
+    // ============================================
+
+    function linkifyReferences(text: string): string {
+      if (!text) return text;
+      
+      // Match #rx-{id} or #history-{id} patterns
+      return text.replace(/#(rx|history)-([a-f0-9-]+)(\s*\([^)]+\))?/g, (match, type, id, description) => {
+        const displayText = match;
+        const typeLabel = type === 'rx' ? 'prescription' : 'medical history';
+        return `<span class="reference-link text-blue-600 hover:text-blue-800 cursor-pointer underline decoration-dotted" 
+                      data-ref-type="${type}" 
+                      data-ref-id="${id}" 
+                      title="Click to view ${typeLabel}"
+                      onclick="showReference('${type}', '${id}')">${displayText}</span>`;
+      });
+    }
+
+    async function showReference(type: string, id: string) {
+      try {
+        if (type === 'rx') {
+          // Fetch prescription
+          const { data, error } = await supabase
+            .from('prescriptions')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+          if (error) throw error;
+
+          if (data) {
+            const content = `
+              <div class="space-y-3">
+                <div class="flex items-center gap-2">
+                  <i class="fas fa-pills text-green-600 text-xl"></i>
+                  <h4 class="text-lg font-bold text-gray-900">${data.medication_name}</h4>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span class="text-gray-600">Dosage:</span>
+                    <span class="font-medium ml-1">${data.dosage}</span>
+                  </div>
+                  <div>
+                    <span class="text-gray-600">Frequency:</span>
+                    <span class="font-medium ml-1">${data.frequency}</span>
+                  </div>
+                  ${data.duration ? `
+                    <div>
+                      <span class="text-gray-600">Duration:</span>
+                      <span class="font-medium ml-1">${data.duration}</span>
+                    </div>
+                  ` : ''}
+                  <div>
+                    <span class="text-gray-600">Status:</span>
+                    <span class="font-medium ml-1 capitalize">${data.status}</span>
+                  </div>
+                </div>
+                ${data.instructions ? `
+                  <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+                    <p class="text-xs text-gray-600 mb-1">Instructions</p>
+                    <p class="text-sm text-gray-900">${linkifyReferences(data.instructions)}</p>
+                  </div>
+                ` : ''}
+                <div class="text-xs text-gray-500 pt-2 border-t">
+                  Prescribed on ${new Date(data.prescribed_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                </div>
+              </div>
+            `;
+
+            await showConfirm(
+              'Prescription Details',
+              content,
+              {
+                type: 'info',
+                confirmText: 'Close',
+                cancelText: ''
+              }
+            );
+          }
+        } else if (type === 'history') {
+          // Fetch medical history
+          const { data, error } = await supabase
+            .from('medical_history')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+          if (error) throw error;
+
+          if (data) {
+            const content = `
+              <div class="flex flex-col gap-2">
+                <!-- Diagnosis Header -->
+                <div class="flex items-start gap-2.5 pb-2 border-b border-gray-200">
+                  <div class="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-file-medical text-blue-600"></i>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Diagnosis</p>
+                    <h4 class="text-base font-bold text-gray-900">${data.diagnosis}</h4>
+                  </div>
+                </div>
+
+                <!-- Symptoms -->
+                ${data.symptoms ? `
+                  <div class="bg-red-50 border border-red-100 rounded-lg p-2.5">
+                    <div class="flex items-center gap-1.5 mb-1">
+                      <i class="fas fa-heartbeat text-red-600 text-xs"></i>
+                      <p class="text-xs font-semibold text-red-900 uppercase tracking-wide">Symptoms</p>
+                    </div>
+                    <p class="text-sm text-gray-900 leading-snug">${linkifyReferences(data.symptoms)}</p>
+                  </div>
+                ` : ''}
+
+                <!-- Treatment -->
+                ${data.treatment ? `
+                  <div class="bg-green-50 border border-green-100 rounded-lg p-2.5">
+                    <div class="flex items-center gap-1.5 mb-1">
+                      <i class="fas fa-prescription text-green-600 text-xs"></i>
+                      <p class="text-xs font-semibold text-green-900 uppercase tracking-wide">Treatment</p>
+                    </div>
+                    <p class="text-sm text-gray-900 leading-snug">${linkifyReferences(data.treatment)}</p>
+                  </div>
+                ` : ''}
+
+                <!-- Notes -->
+                ${data.notes ? `
+                  <div class="bg-amber-50 border border-amber-100 rounded-lg p-2.5">
+                    <div class="flex items-center gap-1.5 mb-1">
+                      <i class="fas fa-sticky-note text-amber-600 text-xs"></i>
+                      <p class="text-xs font-semibold text-amber-900 uppercase tracking-wide">Additional Notes</p>
+                    </div>
+                    <p class="text-sm text-gray-900 leading-snug">${linkifyReferences(data.notes)}</p>
+                  </div>
+                ` : ''}
+
+                <!-- Visit Date Footer -->
+                <div class="flex items-center gap-2 pt-2 border-t border-gray-200">
+                  <i class="fas fa-calendar-check text-gray-400 text-xs"></i>
+                  <p class="text-xs text-gray-500">
+                    Visit: <span class="font-medium text-gray-700">${new Date(data.visit_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  </p>
+                </div>
+              </div>
+            `;
+
+            await showConfirm(
+              'Medical History Record',
+              content,
+              {
+                type: 'info',
+                confirmText: 'Close',
+                cancelText: ''
+              }
+            );
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching reference:', error);
+        showToast('Failed to load reference details', 'error');
+      }
+    }
+
+    async function showPatientDetails(patientId: string) {
+      currentPatientId = patientId;
+      const modal = document.getElementById('patient-details-modal');
+      const modalContent = document.getElementById('patient-details-modal-content');
+      
+      if (!modal || !modalContent) return;
+
+      // Show modal with animation
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modalContent.style.transform = 'scale(1)';
+        modalContent.style.opacity = '1';
+      }, 10);
+
+      // Load patient data
+      await loadPatientData(patientId);
+    }
+
+    async function loadPatientData(patientId: string) {
+      try {
+        // Get patient profile
+        const { data: patient, error: patientError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', patientId)
+          .single();
+
+        if (patientError) throw patientError;
+
+        // Update patient header
+        document.getElementById('patient-avatar')!.textContent = patient.full_name?.charAt(0).toUpperCase() || 'P';
+        document.getElementById('patient-name')!.textContent = patient.full_name || 'Unknown Patient';
+        document.getElementById('patient-email')!.textContent = patient.email || '';
+        document.getElementById('patient-cnp')!.textContent = patient.cnp || '-';
+        
+        // Get appointments count and last visit
+        const { data: appointments, error: apptError } = await supabase
+          .from('appointments')
+          .select('*')
+          .eq('patient_id', patientId)
+          .eq('medic_id', currentUser.id)
+          .order('appointment_date', { ascending: false });
+
+        if (apptError) throw apptError;
+
+        const visitCount = appointments?.length || 0;
+        const lastVisit = appointments?.[0]?.appointment_date;
+
+        document.getElementById('patient-visits')!.textContent = visitCount.toString();
+        document.getElementById('patient-last-visit')!.textContent = lastVisit 
+          ? new Date(lastVisit).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : '-';
+
+        // Update overview tab
+        document.getElementById('overview-email')!.textContent = patient.email || '-';
+        document.getElementById('overview-cnp')!.textContent = patient.cnp || '-';
+        document.getElementById('stat-appointments')!.textContent = visitCount.toString();
+
+        // Get prescriptions count
+        const { data: prescriptions, error: rxError } = await supabase
+          .from('prescriptions')
+          .select('id')
+          .eq('patient_id', patientId)
+          .eq('medic_id', currentUser.id);
+
+        if (!rxError) {
+          document.getElementById('stat-prescriptions')!.textContent = (prescriptions?.length || 0).toString();
+        }
+
+        // Switch to overview tab
+        switchPatientTab('overview');
+
+        // Load tab data
+        await loadMedicalHistory(patientId);
+        await loadPrescriptions(patientId);
+        await loadAppointmentsHistory(patientId);
+
+      } catch (error) {
+        console.error('Error loading patient data:', error);
+        showToast('Failed to load patient data', 'error');
+      }
+    }
+
+    async function loadMedicalHistory(patientId: string) {
+      const container = document.getElementById('medical-history-list');
+      if (!container) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('medical_history')
+          .select('*')
+          .eq('patient_id', patientId)
+          .eq('medic_id', currentUser.id)
+          .order('visit_date', { ascending: false });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+          container.innerHTML = `
+            <div class="text-center py-12 text-gray-400">
+              <i class="fas fa-file-medical text-5xl mb-4 opacity-50"></i>
+              <p>No medical history records yet</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = data.map(record => `
+          <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div class="flex items-start justify-between mb-3">
+              <div>
+                <h5 class="font-semibold text-gray-900">${record.diagnosis}</h5>
+                <p class="text-sm text-gray-500">
+                  <i class="fas fa-calendar mr-1"></i>
+                  ${new Date(record.visit_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                </p>
+              </div>
+            </div>
+            ${record.symptoms ? `
+              <div class="mb-2">
+                <p class="text-xs font-medium text-gray-500 mb-1">Symptoms</p>
+                <p class="text-sm text-gray-700">${linkifyReferences(record.symptoms)}</p>
+              </div>
+            ` : ''}
+            ${record.treatment ? `
+              <div class="mb-2">
+                <p class="text-xs font-medium text-gray-500 mb-1">Treatment</p>
+                <p class="text-sm text-gray-700">${linkifyReferences(record.treatment)}</p>
+              </div>
+            ` : ''}
+            ${record.notes ? `
+              <div>
+                <p class="text-xs font-medium text-gray-500 mb-1">Notes</p>
+                <p class="text-sm text-gray-700">${linkifyReferences(record.notes)}</p>
+              </div>
+            ` : ''}
+          </div>
+        `).join('');
+
+      } catch (error) {
+        console.error('Error loading medical history:', error);
+        container.innerHTML = '<p class="text-center text-red-500">Failed to load medical history</p>';
+      }
+    }
+
+    async function loadPrescriptions(patientId: string) {
+      const container = document.getElementById('prescriptions-list');
+      if (!container) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('prescriptions')
+          .select('*')
+          .eq('patient_id', patientId)
+          .eq('medic_id', currentUser.id)
+          .order('prescribed_date', { ascending: false });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+          container.innerHTML = `
+            <div class="text-center py-12 text-gray-400">
+              <i class="fas fa-pills text-5xl mb-4 opacity-50"></i>
+              <p>No prescriptions yet</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = data.map(rx => `
+          <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div class="flex items-start justify-between mb-3">
+              <div>
+                <h5 class="font-semibold text-gray-900 flex items-center gap-2">
+                  <i class="fas fa-pills text-green-600"></i>
+                  ${rx.medication_name}
+                </h5>
+                <p class="text-sm text-gray-500 mt-1">
+                  <i class="fas fa-calendar mr-1"></i>
+                  Prescribed on ${new Date(rx.prescribed_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
+              </div>
+              <span class="px-3 py-1 rounded-full text-xs font-medium ${
+                rx.status === 'active' ? 'bg-green-100 text-green-700' :
+                rx.status === 'completed' ? 'bg-gray-100 text-gray-700' :
+                'bg-red-100 text-red-700'
+              }">
+                ${rx.status}
+              </span>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <p class="text-xs font-medium text-gray-500">Dosage</p>
+                <p class="text-sm text-gray-900">${rx.dosage}</p>
+              </div>
+              <div>
+                <p class="text-xs font-medium text-gray-500">Frequency</p>
+                <p class="text-sm text-gray-900">${rx.frequency}</p>
+              </div>
+              ${rx.duration ? `
+                <div>
+                  <p class="text-xs font-medium text-gray-500">Duration</p>
+                  <p class="text-sm text-gray-900">${rx.duration}</p>
+                </div>
+              ` : ''}
+            </div>
+            ${rx.instructions ? `
+              <div class="pt-3 border-t border-gray-100">
+                <p class="text-xs font-medium text-gray-500 mb-1">Instructions</p>
+                <p class="text-sm text-gray-700">${linkifyReferences(rx.instructions)}</p>
+              </div>
+            ` : ''}
+          </div>
+        `).join('');
+
+      } catch (error) {
+        console.error('Error loading prescriptions:', error);
+        container.innerHTML = '<p class="text-center text-red-500">Failed to load prescriptions</p>';
+      }
+    }
+
+    async function loadAppointmentsHistory(patientId: string) {
+      const container = document.getElementById('appointments-history-list');
+      if (!container) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('appointments')
+          .select('*')
+          .eq('patient_id', patientId)
+          .eq('medic_id', currentUser.id)
+          .order('appointment_date', { ascending: false });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+          container.innerHTML = `
+            <div class="text-center py-12 text-gray-400">
+              <i class="fas fa-calendar-alt text-5xl mb-4 opacity-50"></i>
+              <p>No appointments yet</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = data.map(apt => `
+          <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex-1">
+                <p class="font-semibold text-gray-900">
+                  ${new Date(apt.appointment_date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </p>
+                <p class="text-sm text-gray-600">
+                  ${new Date(apt.appointment_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+              <span class="px-3 py-1 rounded-full text-xs font-medium ${
+                apt.status === 'completed' ? 'bg-green-100 text-green-700' :
+                apt.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                apt.status === 'no_show' ? 'bg-orange-100 text-orange-700' :
+                'bg-blue-100 text-blue-700'
+              }">
+                ${apt.status}
+              </span>
+            </div>
+            ${apt.reason ? `
+              <p class="text-sm text-gray-700 mb-2">
+                <span class="font-medium">Reason:</span> ${apt.reason}
+              </p>
+            ` : ''}
+            ${apt.notes ? `
+              <p class="text-sm text-gray-700 bg-gray-50 p-2 rounded">
+                <span class="font-medium">Notes:</span> ${apt.notes}
+              </p>
+            ` : ''}
+          </div>
+        `).join('');
+
+      } catch (error) {
+        console.error('Error loading appointments:', error);
+        container.innerHTML = '<p class="text-center text-red-500">Failed to load appointments</p>';
+      }
+    }
+
+    function switchPatientTab(tabName: string) {
+      // Update tab buttons
+      const tabs = document.querySelectorAll('.patient-tab');
+      tabs.forEach(tab => {
+        if (tab.getAttribute('data-tab') === tabName) {
+          tab.classList.add('active');
+        } else {
+          tab.classList.remove('active');
+        }
+      });
+
+      // Update tab content
+      const contents = document.querySelectorAll('.tab-content');
+      contents.forEach(content => {
+        content.classList.add('hidden');
+      });
+      document.getElementById(`tab-${tabName}`)?.classList.remove('hidden');
+    }
+
+    // Tab click handlers
+    document.querySelectorAll('.patient-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const tabName = tab.getAttribute('data-tab');
+        if (tabName) switchPatientTab(tabName);
+      });
+    });
+
+    // Close modal handler
+    document.getElementById('close-patient-modal')?.addEventListener('click', () => {
+      const modal = document.getElementById('patient-details-modal');
+      const modalContent = document.getElementById('patient-details-modal-content');
+      
+      if (modalContent) {
+        modalContent.style.transform = 'scale(0.95)';
+        modalContent.style.opacity = '0';
+      }
+
+      setTimeout(() => {
+        modal?.classList.add('hidden');
+      }, 300);
+    });
+
+    // Add medical record handlers
+    document.getElementById('add-history-btn')?.addEventListener('click', () => {
+      if (currentPatientId) addMedicalRecord(currentPatientId);
+    });
+    
+    document.getElementById('add-history-btn-2')?.addEventListener('click', () => {
+      if (currentPatientId) addMedicalRecord(currentPatientId);
+    });
+
+    // Add prescription handlers
+    document.getElementById('add-prescription-btn')?.addEventListener('click', () => {
+      if (currentPatientId) addPrescription(currentPatientId);
+    });
+    
+    document.getElementById('add-prescription-btn-2')?.addEventListener('click', () => {
+      if (currentPatientId) addPrescription(currentPatientId);
+    });
+
+    async function addMedicalRecord(patientId: string) {
+      const modal = document.getElementById('medical-record-modal');
+      const modalContent = document.getElementById('medical-record-modal-content');
+      const form = document.getElementById('medical-record-form') as HTMLFormElement;
+      
+      if (!modal || !modalContent || !form) return;
+
+      // Get patient data for display
+      const patient = patientsData.find(p => p.id === patientId);
+      
+      // Set patient info
+      document.getElementById('medical-record-patient-name')!.textContent = patient?.full_name || 'Patient';
+      (document.getElementById('mr-patient-id') as HTMLInputElement).value = patientId;
+      
+      // Set default visit date to now
+      const now = new Date();
+      const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      (document.getElementById('mr-visit-date') as HTMLInputElement).value = localDateTime;
+      
+      // Reset form
+      form.reset();
+      (document.getElementById('mr-patient-id') as HTMLInputElement).value = patientId;
+      (document.getElementById('mr-visit-date') as HTMLInputElement).value = localDateTime;
+
+      // Setup autocomplete for treatment and notes fields
+      setupAutocomplete('mr-treatment', 'mr-treatment-autocomplete', patientId);
+      setupAutocomplete('mr-notes', 'mr-notes-autocomplete', patientId);
+
+      // Show modal with animation
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modalContent.style.transform = 'scale(1)';
+        modalContent.style.opacity = '1';
+      }, 10);
+    }
+
+    async function addPrescription(patientId: string) {
+      const modal = document.getElementById('prescription-modal');
+      const modalContent = document.getElementById('prescription-modal-content');
+      const form = document.getElementById('prescription-form') as HTMLFormElement;
+      
+      if (!modal || !modalContent || !form) return;
+
+      // Get patient data for display
+      const patient = patientsData.find(p => p.id === patientId);
+      
+      // Set patient info
+      document.getElementById('prescription-patient-name')!.textContent = patient?.full_name || 'Patient';
+      (document.getElementById('rx-patient-id') as HTMLInputElement).value = patientId;
+      
+      // Reset form
+      form.reset();
+      (document.getElementById('rx-patient-id') as HTMLInputElement).value = patientId;
+      (document.getElementById('rx-status') as HTMLSelectElement).value = 'active';
+
+      // Setup autocomplete for instructions field
+      setupAutocomplete('rx-instructions', 'rx-autocomplete', patientId);
+
+      // Show modal with animation
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modalContent.style.transform = 'scale(1)';
+        modalContent.style.opacity = '1';
+      }, 10);
+    }
+
+    // ============================================
+    // MEDICAL RECORD FORM HANDLERS
+    // ============================================
+
+    // Close medical record modal
+    document.getElementById('close-medical-record-modal')?.addEventListener('click', () => {
+      closeMedicalRecordModal();
+    });
+
+    document.getElementById('cancel-medical-record-btn')?.addEventListener('click', () => {
+      closeMedicalRecordModal();
+    });
+
+    function closeMedicalRecordModal() {
+      const modal = document.getElementById('medical-record-modal');
+      const modalContent = document.getElementById('medical-record-modal-content');
+      
+      if (modalContent) {
+        modalContent.style.transform = 'scale(0.95)';
+        modalContent.style.opacity = '0';
+      }
+
+      setTimeout(() => {
+        modal?.classList.add('hidden');
+      }, 300);
+    }
+
+    // Submit medical record form
+    document.getElementById('medical-record-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const form = e.target as HTMLFormElement;
+      const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+      
+      // Disable submit button
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
+
+      try {
+        const patientId = (document.getElementById('mr-patient-id') as HTMLInputElement).value;
+        const diagnosis = (document.getElementById('mr-diagnosis') as HTMLInputElement).value;
+        const symptoms = (document.getElementById('mr-symptoms') as HTMLTextAreaElement).value;
+        const treatment = (document.getElementById('mr-treatment') as HTMLTextAreaElement).value;
+        const notes = (document.getElementById('mr-notes') as HTMLTextAreaElement).value;
+        const visitDate = (document.getElementById('mr-visit-date') as HTMLInputElement).value;
+        const appointmentId = (document.getElementById('mr-appointment-id') as HTMLInputElement).value;
+
+        const { data, error } = await supabase
+          .from('medical_history')
+          .insert([{
+            patient_id: patientId,
+            medic_id: currentUser.id,
+            appointment_id: appointmentId || null,
+            diagnosis,
+            symptoms: symptoms || null,
+            treatment: treatment || null,
+            notes: notes || null,
+            visit_date: visitDate
+          }])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        showToast('Medical record saved successfully!', 'success');
+        closeMedicalRecordModal();
+        
+        // Reload medical history if patient details modal is open
+        if (currentPatientId) {
+          await loadMedicalHistory(currentPatientId);
+        }
+
+      } catch (error) {
+        console.error('Error saving medical record:', error);
+        showToast('Failed to save medical record', 'error');
+      } finally {
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Save Record';
+      }
+    });
+
+    // ============================================
+    // PRESCRIPTION FORM HANDLERS
+    // ============================================
+
+    // Close prescription modal
+    document.getElementById('close-prescription-modal')?.addEventListener('click', () => {
+      closePrescriptionModal();
+    });
+
+    document.getElementById('cancel-prescription-btn')?.addEventListener('click', () => {
+      closePrescriptionModal();
+    });
+
+    function closePrescriptionModal() {
+      const modal = document.getElementById('prescription-modal');
+      const modalContent = document.getElementById('prescription-modal-content');
+      
+      if (modalContent) {
+        modalContent.style.transform = 'scale(0.95)';
+        modalContent.style.opacity = '0';
+      }
+
+      setTimeout(() => {
+        modal?.classList.add('hidden');
+      }, 300);
+    }
+
+    // Handle custom frequency toggle
+    document.getElementById('rx-frequency')?.addEventListener('change', (e) => {
+      const select = e.target as HTMLSelectElement;
+      const customContainer = document.getElementById('custom-frequency-container');
+      
+      if (select.value === 'custom') {
+        customContainer?.classList.remove('hidden');
+      } else {
+        customContainer?.classList.add('hidden');
+      }
+    });
+
+    // Submit prescription form
+    document.getElementById('prescription-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const form = e.target as HTMLFormElement;
+      const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+      
+      // Disable submit button
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creating...';
+
+      try {
+        const patientId = (document.getElementById('rx-patient-id') as HTMLInputElement).value;
+        const medication = (document.getElementById('rx-medication') as HTMLInputElement).value;
+        const dosage = (document.getElementById('rx-dosage') as HTMLInputElement).value;
+        const frequencySelect = (document.getElementById('rx-frequency') as HTMLSelectElement).value;
+        const frequencyCustom = (document.getElementById('rx-frequency-custom') as HTMLInputElement).value;
+        const frequency = frequencySelect === 'custom' ? frequencyCustom : frequencySelect;
+        const durationValue = (document.getElementById('rx-duration-value') as HTMLInputElement).value;
+        const durationUnit = (document.getElementById('rx-duration-unit') as HTMLSelectElement).value;
+        const duration = durationValue ? `${durationValue} ${durationUnit}` : null;
+        const instructions = (document.getElementById('rx-instructions') as HTMLTextAreaElement).value;
+        const status = (document.getElementById('rx-status') as HTMLSelectElement).value;
+        const appointmentId = (document.getElementById('rx-appointment-id') as HTMLInputElement).value;
+        const medicalHistoryId = (document.getElementById('rx-medical-history-id') as HTMLInputElement).value;
+
+        const { data, error } = await supabase
+          .from('prescriptions')
+          .insert([{
+            patient_id: patientId,
+            medic_id: currentUser.id,
+            appointment_id: appointmentId || null,
+            medical_history_id: medicalHistoryId || null,
+            medication_name: medication,
+            dosage,
+            frequency,
+            duration,
+            instructions: instructions || null,
+            status
+          }])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        showToast('Prescription created successfully!', 'success');
+        closePrescriptionModal();
+        
+        // Reload prescriptions if patient details modal is open
+        if (currentPatientId) {
+          await loadPrescriptions(currentPatientId);
+          // Update prescription count
+          const { data: prescriptions } = await supabase
+            .from('prescriptions')
+            .select('id')
+            .eq('patient_id', currentPatientId)
+            .eq('medic_id', currentUser.id);
+          
+          document.getElementById('stat-prescriptions')!.textContent = (prescriptions?.length || 0).toString();
+        }
+
+      } catch (error) {
+        console.error('Error creating prescription:', error);
+        showToast('Failed to create prescription', 'error');
+      } finally {
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-prescription-bottle mr-2"></i>Create Prescription';
+      }
+    });
+
+    // Make functions globally available for inline event handlers
+    (window as any).showPatientDetails = showPatientDetails;
+    (window as any).showReference = showReference;
+
+    // Setup toggle switch functionality
+    const todayBtn = document.getElementById('today-btn');
+    const upcomingBtn = document.getElementById('upcoming-btn');
+    const todaySchedule = document.getElementById('today-schedule');
+    const upcomingSchedule = document.getElementById('upcoming-appointments');
+
+    if (todayBtn && upcomingBtn && todaySchedule && upcomingSchedule) {
+      // Show today by default
+      todaySchedule.classList.remove('hidden');
+      upcomingSchedule.classList.add('hidden');
+      
+      todayBtn.addEventListener('click', () => {
+        todayBtn.classList.add('bg-gradient-to-r', 'from-green-600', 'to-teal-600', 'text-white', 'shadow-lg');
+        todayBtn.classList.remove('text-gray-600', 'hover:bg-gray-100');
+        upcomingBtn.classList.remove('bg-gradient-to-r', 'from-green-600', 'to-teal-600', 'text-white', 'shadow-lg');
+        upcomingBtn.classList.add('text-gray-600', 'hover:bg-gray-100');
+        
+        todaySchedule.classList.remove('hidden');
+        upcomingSchedule.classList.add('hidden');
+      });
+      
+      upcomingBtn.addEventListener('click', () => {
+        upcomingBtn.classList.add('bg-gradient-to-r', 'from-green-600', 'to-teal-600', 'text-white', 'shadow-lg');
+        upcomingBtn.classList.remove('text-gray-600', 'hover:bg-gray-100');
+        todayBtn.classList.remove('bg-gradient-to-r', 'from-green-600', 'to-teal-600', 'text-white', 'shadow-lg');
+        todayBtn.classList.add('text-gray-600', 'hover:bg-gray-100');
+        
+        todaySchedule.classList.add('hidden');
+        upcomingSchedule.classList.remove('hidden');
+      });
+    }
+
     // Load dashboard
     loadDashboardData();
   </script>
@@ -1678,6 +2866,26 @@ const placeholderUser = { email: 'loading@example.com' };
     .appointment-card,
     .patient-card {
       transition: all 0.2s ease;
+    }
+
+    /* Autocomplete styling */
+    .autocomplete-item {
+      position: relative;
+      transition: all 0.15s ease;
+    }
+
+    .autocomplete-item:hover {
+      background-color: rgb(249, 250, 251);
+    }
+
+    .autocomplete-item.bg-blue-50 {
+      background-color: rgb(239, 246, 255);
+      border-left: 3px solid rgb(59, 130, 246);
+    }
+
+    code {
+      font-family: 'Courier New', monospace;
+      font-size: 0.875em;
     }
   </style>
 </MainLayout>
