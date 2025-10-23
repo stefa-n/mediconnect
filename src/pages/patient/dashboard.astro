@@ -536,43 +536,42 @@ const placeholderUser = { email: 'loading@example.com' };
 
         try {
           const [appointmentsResult, prescriptionsResult, recordsResult, requestsResult] = await Promise.all([
-            // Fetch appointments
+            // Fetch all appointments with medic and hospital info (filter by date in JS if needed)
             supabase
               .from('appointments')
               .select(`
                 *,
-                doctor:profiles!appointments_medic_id_fkey(id, full_name)
+                medic:profiles!appointments_medic_id_fkey(id, full_name, department),
+                hospital:hospitals(id, name)
               `)
               .eq('patient_id', userId)
-              .gte('appointment_date', new Date().toISOString().split('T')[0])
-              .order('appointment_date', { ascending: true })
-              .limit(5),
+              .order('appointment_date', { ascending: true }),
             
             // Fetch prescriptions
             supabase
               .from('prescriptions')
               .select(`
                 *,
-                doctor:profiles!prescriptions_doctor_id_fkey(id, full_name)
+                medic:profiles!prescriptions_medic_id_fkey(id, full_name)
               `)
               .eq('patient_id', userId)
               .eq('status', 'active')
               .order('prescribed_date', { ascending: false })
               .limit(5),
             
-            // Fetch medical records count
+            // Fetch medical history count (not medical_records)
             supabase
-              .from('medical_records')
+              .from('medical_history')
               .select('*', { count: 'exact', head: true })
               .eq('patient_id', userId),
 
-            // Fetch appointment requests
+            // Fetch appointment requests with complete info
             supabase
               .from('appointment_requests')
               .select(`
                 *,
                 hospital:hospitals(id, name),
-                medic:profiles!appointment_requests_medic_id_fkey(id, full_name),
+                medic:profiles!appointment_requests_medic_id_fkey(id, full_name, department),
                 appointment:appointments(id, appointment_date, status)
               `)
               .eq('patient_id', userId)
@@ -605,9 +604,18 @@ const placeholderUser = { email: 'loading@example.com' };
         }
 
         // Update stats
-        const pendingRequests = appointmentRequests.filter(r => r.status === 'pending').length;
+        // Filter pending requests to only include those without appointments and not cancelled
+        const pendingRequests = appointmentRequests.filter(r => 
+          r.status === 'pending' && !r.appointment_id
+        ).length;
+        
+        // Count all scheduled appointments
+        const scheduledAppointments = appointments.filter(apt => 
+          apt.status === 'scheduled'
+        );
+        
         updateStats(
-          appointments?.length || 0,
+          scheduledAppointments.length,
           pendingRequests,
           prescriptions?.length || 0,
           recordsCount || 0
@@ -693,31 +701,32 @@ const placeholderUser = { email: 'loading@example.com' };
     }
 
     function updateStats(appointments: number, pendingRequests: number, prescriptions: number, records: number) {
-      // Select the stat card containers
+      // Select the stat card containers within the stats grid
       const statsGrid = document.getElementById('stats-grid');
       if (!statsGrid) return;
 
+      // Get all stat cards (the actual StatsCard components)
       const statCards = statsGrid.querySelectorAll('.stats-card');
       
-      // Update Upcoming Appointments
+      // Update Upcoming Appointments (first card)
       if (statCards[0]) {
         const valueEl = statCards[0].querySelector('.text-3xl');
         if (valueEl) valueEl.textContent = appointments.toString();
       }
       
-      // Update Pending Requests
+      // Update Pending Requests (second card)
       if (statCards[1]) {
         const valueEl = statCards[1].querySelector('.text-3xl');
         if (valueEl) valueEl.textContent = pendingRequests.toString();
       }
       
-      // Update Active Prescriptions
+      // Update Active Prescriptions (third card)
       if (statCards[2]) {
         const valueEl = statCards[2].querySelector('.text-3xl');
         if (valueEl) valueEl.textContent = prescriptions.toString();
       }
       
-      // Update Medical Records
+      // Update Medical Records (fourth card)
       if (statCards[3]) {
         const valueEl = statCards[3].querySelector('.text-3xl');
         if (valueEl) valueEl.textContent = records.toString();
@@ -745,7 +754,7 @@ const placeholderUser = { email: 'loading@example.com' };
             <div class="flex items-start justify-between mb-2">
               <div>
                 <p class="font-semibold text-foreground">${rx.medication_name}</p>
-                <p class="text-sm text-muted-foreground">Prescribed by ${rx.doctor?.full_name || 'Dr. Unknown'}</p>
+                <p class="text-sm text-muted-foreground">Prescribed by ${rx.medic?.full_name || 'Dr. Unknown'}</p>
               </div>
               <span class="px-2 py-1 text-xs rounded-full ${statusClass}">
                 ${rx.status}
@@ -755,6 +764,11 @@ const placeholderUser = { email: 'loading@example.com' };
               <span class="text-muted-foreground">${rx.dosage} - ${rx.frequency}</span>
               <span class="text-muted-foreground">${dateStr}</span>
             </div>
+            ${rx.instructions ? `
+              <div class="mt-2 text-sm text-muted-foreground">
+                <i class="fas fa-info-circle mr-1"></i>${rx.instructions}
+              </div>
+            ` : ''}
           </div>
         `;
       }).join('');
@@ -796,8 +810,19 @@ const placeholderUser = { email: 'loading@example.com' };
       // Combine and sort by date
       const combined: any[] = [];
 
-      // Add requests
-      requests.forEach(request => {
+      // Filter out requests that already have a scheduled appointment
+      // Only show requests that are truly pending (no appointment_id)
+      // Also exclude cancelled requests to keep the list clean
+      const pendingRequests = requests.filter(request => {
+        // Don't show if appointment has been created from this request
+        if (request.appointment_id) return false;
+        // Don't show if request was cancelled
+        if (request.status === 'cancelled') return false;
+        return true;
+      });
+
+      // Add pending requests (those without scheduled appointments)
+      pendingRequests.forEach(request => {
         combined.push({
           type: 'request',
           data: request,
@@ -871,6 +896,10 @@ const placeholderUser = { email: 'loading@example.com' };
         year: 'numeric' 
       });
 
+      // Check if appointment has been created from this request
+      const hasScheduledAppointment = request.appointment && request.appointment.id;
+      const appointmentStatus = request.appointment?.status || '';
+
       return `
         <div class="p-4 rounded-lg border-2 border-dashed border-orange-200 bg-orange-50/30 hover:bg-orange-50/50 transition-colors mb-3">
           <div class="flex items-start justify-between mb-3">
@@ -886,10 +915,15 @@ const placeholderUser = { email: 'loading@example.com' };
                   ${request.department}
                 </p>
               ` : ''}
-              ${request.medic ? `
+              ${hasScheduledAppointment ? `
+                <p class="text-sm text-green-600 ml-6 font-semibold">
+                  <i class="fas fa-check-circle mr-1"></i>
+                  Appointment Scheduled
+                </p>
+              ` : request.medic ? `
                 <p class="text-sm text-muted-foreground ml-6">
                   <i class="fas fa-user-md mr-1"></i>
-                  Assigned to: Dr. ${request.medic.full_name}
+                  Assigned to: Dr. ${request.medic.full_name}${request.medic.department ? ` (${request.medic.department})` : ''}
                 </p>
               ` : `
                 <p class="text-sm text-muted-foreground ml-6">
@@ -908,7 +942,29 @@ const placeholderUser = { email: 'loading@example.com' };
             <p class="text-sm text-foreground"><strong>Reason:</strong> ${request.reason}</p>
           </div>
 
-          <div class="flex items-center justify-between text-xs text-muted-foreground">
+          ${hasScheduledAppointment ? `
+            <div class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p class="text-sm font-medium text-green-800 mb-2">
+                <i class="fas fa-calendar-check mr-2"></i>
+                Appointment Details:
+              </p>
+              <div class="text-sm text-green-700 space-y-1">
+                <p><strong>Date:</strong> ${new Date(request.appointment.appointment_date).toLocaleDateString('en-US', { 
+                  weekday: 'long',
+                  month: 'long', 
+                  day: 'numeric',
+                  year: 'numeric'
+                })}</p>
+                <p><strong>Time:</strong> ${new Date(request.appointment.appointment_date).toLocaleTimeString('en-US', {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}</p>
+                <p><strong>Status:</strong> <span class="capitalize">${appointmentStatus}</span></p>
+              </div>
+            </div>
+          ` : ''}
+
+          <div class="flex items-center justify-between text-xs text-muted-foreground mt-3">
             <span>
               <i class="fas fa-calendar mr-1"></i>
               Requested on ${createdDate}
@@ -931,7 +987,7 @@ const placeholderUser = { email: 'loading@example.com' };
             </div>
           ` : ''}
 
-          ${request.status === 'pending' ? `
+          ${request.status === 'pending' && !hasScheduledAppointment ? `
             <button 
               class="cancel-request-btn mt-3 w-full px-4 py-2 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
               data-request-id="${request.id}"
@@ -965,17 +1021,23 @@ const placeholderUser = { email: 'loading@example.com' };
         minute: '2-digit'
       });
 
+      const medicName = appointment.medic?.full_name || 'Doctor';
+      const medicDepartment = appointment.medic?.department || '';
+      const hospitalName = appointment.hospital?.name || 'Hospital';
+      const initial = medicName.charAt(0).toUpperCase();
+
       return `
         <div class="p-4 rounded-lg border-2 border-blue-200 bg-blue-50/30 hover:bg-blue-50/50 transition-colors mb-3">
           <div class="flex items-start justify-between mb-3">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-2">
                 <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
-                  ${appointment.medics?.full_name?.charAt(0).toUpperCase() || 'D'}
+                  ${initial}
                 </div>
                 <div>
-                  <p class="font-semibold text-foreground">Dr. ${appointment.medics?.full_name || 'Doctor'}</p>
-                  <p class="text-xs text-muted-foreground">${appointment.hospitals?.name || 'Hospital'}</p>
+                  <p class="font-semibold text-foreground">Dr. ${medicName}</p>
+                  <p class="text-xs text-muted-foreground">${hospitalName}</p>
+                  ${medicDepartment ? `<p class="text-xs text-blue-600 font-medium">${medicDepartment}</p>` : ''}
                 </div>
               </div>
             </div>
@@ -1006,6 +1068,24 @@ const placeholderUser = { email: 'loading@example.com' };
               <div class="mt-2 pt-2 border-t border-gray-200">
                 <p class="text-xs text-muted-foreground mb-1">Reason</p>
                 <p class="text-sm text-foreground">${appointment.reason}</p>
+              </div>
+            ` : ''}
+            ${appointment.severity && appointment.severity !== 'normal' ? `
+              <div class="mt-2 pt-2 border-t border-gray-200">
+                <p class="text-xs text-muted-foreground mb-1">Priority</p>
+                <span class="inline-block px-2 py-1 text-xs rounded-full ${
+                  appointment.severity === 'urgent' ? 'bg-red-100 text-red-700 border border-red-300' :
+                  appointment.severity === 'high' ? 'bg-orange-100 text-orange-700 border border-orange-300' :
+                  'bg-gray-100 text-gray-700 border border-gray-300'
+                }">
+                  ${appointment.severity.toUpperCase()}
+                </span>
+              </div>
+            ` : ''}
+            ${appointment.notes ? `
+              <div class="mt-2 pt-2 border-t border-gray-200">
+                <p class="text-xs text-muted-foreground mb-1">Notes</p>
+                <p class="text-sm text-foreground">${appointment.notes}</p>
               </div>
             ` : ''}
           </div>
