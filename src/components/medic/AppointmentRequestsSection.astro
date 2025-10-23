@@ -1,0 +1,23 @@
+---
+---
+
+<div class="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
+  <div class="p-6 border-b border-border bg-gradient-to-r from-orange-50 to-yellow-50">
+    <div class="flex items-start sm:items-center justify-between gap-3">
+      <div>
+        <h3 class="text-xl font-bold text-foreground flex items-center gap-2">
+          <i class="fas fa-clipboard-list text-orange-600"></i>
+          Appointment Requests
+        </h3>
+        <p class="text-sm text-muted-foreground mt-1">Review and schedule patient appointments</p>
+      </div>
+      <span id="pending-requests-badge" class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium hidden whitespace-nowrap">
+        <i class="fas fa-clock mr-1"></i>
+        <span id="pending-count">0</span> pending
+      </span>
+    </div>
+  </div>
+  <div id="appointment-requests-list" class="p-6">
+    <!-- Appointment requests will be rendered here -->
+  </div>
+</div>
