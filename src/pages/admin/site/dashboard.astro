@@ -772,8 +772,43 @@ const placeholderUser = { email: 'loading@example.com' };
       const loadingEl = detailsSection.querySelector('.hospital-loading');
       const contentEl = detailsSection.querySelector('.hospital-content');
 
-      // Show loading state
-      if (loadingEl) loadingEl.classList.remove('hidden');
+      // Show skeleton loader
+      if (loadingEl) {
+        loadingEl.classList.remove('hidden');
+        loadingEl.innerHTML = `
+          <div class="space-y-4 animate-pulse">
+            <!-- Stats Skeleton -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              ${[1,2,3,4].map(() => `
+                <div class="bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 bg-[length:200%_100%] animate-shimmer rounded-lg p-4 h-24">
+                  <div class="h-3 bg-gray-300 rounded w-2/3 mb-3"></div>
+                  <div class="h-8 bg-gray-300 rounded w-1/3"></div>
+                </div>
+              `).join('')}
+            </div>
+            
+            <!-- Admins Skeleton -->
+            <div class="mt-5">
+              <div class="h-5 bg-gray-300 rounded w-48 mb-3"></div>
+              <div class="space-y-2">
+                ${[1,2].map(() => `
+                  <div class="bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 bg-[length:200%_100%] animate-shimmer rounded-lg p-4 h-16"></div>
+                `).join('')}
+              </div>
+            </div>
+            
+            <!-- Recent Appointments Skeleton -->
+            <div class="mt-5">
+              <div class="h-5 bg-gray-300 rounded w-56 mb-3"></div>
+              <div class="space-y-2">
+                ${[1,2,3].map(() => `
+                  <div class="bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 bg-[length:200%_100%] animate-shimmer rounded-lg p-4 h-20"></div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      }
       if (contentEl) contentEl.classList.add('hidden');
 
       try {
@@ -1012,15 +1047,28 @@ const placeholderUser = { email: 'loading@example.com' };
           });
         });
 
-        // Hide loading, show content
-        if (loadingEl) loadingEl.classList.add('hidden');
-        if (contentEl) contentEl.classList.remove('hidden');
+        // Hide loading with fade out, show content with fade in
+        if (loadingEl) {
+          (loadingEl as HTMLElement).style.opacity = '0';
+          setTimeout(() => {
+            loadingEl.classList.add('hidden');
+          }, 300);
+        }
+        
+        if (contentEl) {
+          (contentEl as HTMLElement).style.opacity = '0';
+          contentEl.classList.remove('hidden');
+          setTimeout(() => {
+            (contentEl as HTMLElement).style.transition = 'opacity 0.5s ease-in';
+            (contentEl as HTMLElement).style.opacity = '1';
+          }, 300);
+        }
 
       } catch (error) {
         console.error('Error loading hospital data:', error);
         if (loadingEl) {
           loadingEl.innerHTML = `
-            <div class="text-center py-6 text-red-600">
+            <div class="text-center py-6 text-red-600 animate-shake">
               <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
               <p class="text-sm">Failed to load hospital data</p>
             </div>
@@ -1705,6 +1753,25 @@ const placeholderUser = { email: 'loading@example.com' };
     @keyframes progress {
       0% { width: 0%; }
       100% { width: 100%; }
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+      20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+
+    .animate-shimmer {
+      animation: shimmer 2s ease-in-out infinite;
+    }
+
+    .animate-shake {
+      animation: shake 0.5s ease-in-out;
     }
 
     @keyframes slideInRight {
