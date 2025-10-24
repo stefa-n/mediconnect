@@ -94,13 +94,13 @@ const placeholderUser = { email: 'loading@example.com' };
       </div>
 
       <!-- MediConnect Card Section -->
-      <div class="border-2 rounded-2xl shadow-2xl p-1 transition-all duration-500 hover:shadow-[0_0_50px_hsl(var(--primary)/0.3)] mb-6" style="background: linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--secondary) / 0.1));">
+      <div id="mc-card" class="border-2 rounded-2xl shadow-2xl p-1 transition-all duration-500 hover:shadow-[0_0_50px_hsl(var(--primary)/0.3)] mb-6" style="background: linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--secondary) / 0.1));">
         <div class="p-8 rounded-2xl bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 relative overflow-hidden">
           <div class="absolute top-0 right-0 w-64 h-64 rounded-full opacity-20" style="background: radial-gradient(circle, hsl(var(--primary) / 0.3), transparent 70%); filter: blur(40px);"></div>
           
           <div class="mb-8 relative z-10">
             <div class="flex items-center justify-between mb-3">
-              <h3 class="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">MediConnect Card</h3>
+              <h3 class="text-2xl font-bold bg-gradient-to-r from-primary to-black bg-clip-text text-transparent">MediConnect Card</h3>
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8 text-primary" style="filter: drop-shadow(0 2px 8px hsl(var(--primary) / 0.4));">
                 <rect width="20" height="14" x="2" y="5" rx="2"></rect>
                 <line x1="2" x2="22" y1="10" y2="10"></line>
@@ -708,6 +708,26 @@ const placeholderUser = { email: 'loading@example.com' };
     document.addEventListener('DOMContentLoaded', () => {
       // Initialize profile first
       initProfile();
+
+      // Check for hash in URL to scroll to MC Card section
+      if (window.location.hash === '#mc-card') {
+        setTimeout(() => {
+          const mcCardSection = document.getElementById('mc-card');
+          if (mcCardSection) {
+            // Scroll to the MC Card section
+            mcCardSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Add glow effect
+            mcCardSection.style.transition = 'box-shadow 1s ease-in-out';
+            mcCardSection.style.boxShadow = '0 0 40px 8px rgba(59, 130, 246, 0.6)';
+            
+            // Remove glow after 1 second
+            setTimeout(() => {
+              mcCardSection.style.boxShadow = '';
+            }, 1000);
+          }
+        }, 500); // Wait for content to load
+      }
 
       // Avatar upload
       const uploadBtn = document.getElementById('upload-avatar-btn');

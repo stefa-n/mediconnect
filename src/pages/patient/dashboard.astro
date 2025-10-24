@@ -1882,9 +1882,37 @@ const placeholderUser = { email: 'loading@example.com' };
       }
     });
 
-    // Wait for Quick Actions to be loaded, then add AI Assistant button handler
+    // Wait for Quick Actions to be loaded, then add button handlers
     setTimeout(() => {
-      // Find all Quick Actions buttons and attach AI Assistant handler
+      // Book Appointment - Opens request appointment modal
+      document.getElementById('quick-action-book-appointment')?.addEventListener('click', openRequestAppointmentModal);
+      
+      // View MC Card - Navigate to profile page with hash to MC card section
+      document.getElementById('quick-action-view-mc-card')?.addEventListener('click', () => {
+        window.location.href = '/profile#mc-card';
+      });
+      
+      // Medical Records - Scroll to and highlight medical history section
+      document.getElementById('quick-action-medical-records')?.addEventListener('click', () => {
+        const medicalHistorySection = document.querySelector('.bg-card.rounded-xl.shadow-lg.border.border-border.overflow-hidden.h-fit') as HTMLElement;
+        const medicalRecordsContainer = document.getElementById('medical-records-container');
+        
+        if (medicalHistorySection && medicalRecordsContainer) {
+          // Scroll to the section
+          medicalHistorySection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          
+          // Add glow effect
+          medicalHistorySection.style.transition = 'box-shadow 1s ease-in-out';
+          medicalHistorySection.style.boxShadow = '0 0 30px 5px rgba(168, 85, 247, 0.6)';
+          
+          // Remove glow after 1 second
+          setTimeout(() => {
+            medicalHistorySection.style.boxShadow = '';
+          }, 1000);
+        }
+      });
+      
+      // AI Assistant - Keep existing functionality
       const quickActionButtons = document.querySelectorAll('.w-full.px-4.py-3');
       quickActionButtons.forEach(btn => {
         const btnText = btn.textContent?.trim();
