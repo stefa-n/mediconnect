@@ -462,8 +462,40 @@ const placeholderUser = { email: 'loading@example.com' };
           return;
         }
 
+        console.log('Profile hospital_id:', profile.hospital_id);
+        console.log('Profile hospitals:', profile.hospitals);
+
+        // Check if user has a hospital_id
         if (!profile.hospital_id) {
           showToast('No hospital assigned to your account. Please contact support.', 'error');
+          return;
+        }
+
+        // Check if the hospital still exists
+        if (!profile.hospitals) {
+          console.log('Hospital does not exist in database, converting to patient...');
+          showToast('Your assigned hospital no longer exists. Converting your account to patient role...', 'warning');
+          
+          // Convert to patient account
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ 
+              role: 'patient', 
+              hospital_id: null,
+              department: null 
+            })
+            .eq('id', user.id);
+
+          if (updateError) {
+            console.error('Error converting account:', updateError);
+            showToast('Failed to convert account. Please contact support.', 'error');
+            return;
+          }
+
+          showToast('Account converted to patient. Redirecting...', 'success');
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 2000);
           return;
         }
 

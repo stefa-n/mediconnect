@@ -517,8 +517,40 @@ const placeholderUser = { email: 'loading@example.com' };
           return;
         }
 
+        console.log('Profile hospital_id:', profile.hospital_id);
+        console.log('Profile hospitals:', profile.hospitals);
+
+        // Check if user has a hospital_id
         if (!profile.hospital_id) {
           showToast('No hospital assigned to your account. Please contact your administrator.', 'error');
+          return;
+        }
+
+        // Check if the hospital still exists
+        if (!profile.hospitals) {
+          console.log('Hospital does not exist in database, converting to patient...');
+          showToast('Your assigned hospital no longer exists. Converting your account to patient role...', 'warning');
+          
+          // Convert to patient account
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ 
+              role: 'patient', 
+              hospital_id: null,
+              department: null 
+            })
+            .eq('id', user.id);
+
+          if (updateError) {
+            console.error('Error converting account:', updateError);
+            showToast('Failed to convert account. Please contact support.', 'error');
+            return;
+          }
+
+          showToast('Account converted to patient. Redirecting...', 'success');
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 2000);
           return;
         }
 
@@ -930,22 +962,22 @@ const placeholderUser = { email: 'loading@example.com' };
       const container = document.getElementById('patients-list');
       if (!container) return;
 
-      let filteredPatients = patientsData;
-      
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase().trim();
+      // Show loading state
+      container.innerHTML = `
+        <div class="text-center py-12">
+          <i class="fas fa-spinner fa-spin text-4xl text-primary mb-4"></i>
+          <p class="text-muted-foreground">Loading patients...</p>
+        </div>
+      `;
+
+      try {
+        let filteredPatients: any[] = [];
         
-        // Check if it's a barcode search (starts with MC)
-        if (query.startsWith('mc')) {
-          // Show loading state
-          container.innerHTML = `
-            <div class="text-center py-12">
-              <i class="fas fa-spinner fa-spin text-4xl text-primary mb-4"></i>
-              <p class="text-muted-foreground">Looking up barcode...</p>
-            </div>
-          `;
+        if (searchQuery) {
+          const query = searchQuery.toLowerCase().trim();
           
-          try {
+          // Check if it's a barcode search (starts with MC)
+          if (query.startsWith('mc')) {
             // Search by barcode_id
             const { data: patient, error } = await supabase
               .from('profiles')
@@ -1025,66 +1057,151 @@ const placeholderUser = { email: 'loading@example.com' };
               </div>
             `;
             return;
-          } catch (error) {
-            console.error('Error looking up barcode:', error);
+          } else {
+            // Normal name/email search - search in database
+            const { data: patients, error } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('role', 'patient')
+              .or(`full_name.ilike.%${query}%,email.ilike.%${query}%`)
+              .order('full_name')
+              .limit(50);
+
+            if (error) {
+              console.error('Error searching patients:', error);
+              container.innerHTML = `
+                <div class="text-center py-12 text-red-500">
+                  <i class="fas fa-exclamation-triangle text-5xl mb-4 opacity-50"></i>
+                  <p class="text-lg font-medium mb-2">Error</p>
+                  <p class="text-sm text-muted-foreground">Failed to search patients. Please try again.</p>
+                </div>
+              `;
+              return;
+            }
+
+            // Get appointment counts for all patients
+            if (patients && patients.length > 0) {
+              for (const patient of patients) {
+                const { count: apptCount } = await supabase
+                  .from('appointments')
+                  .select('*', { count: 'exact', head: true })
+                  .eq('patient_id', patient.id)
+                  .eq('medic_id', currentUser.id);
+
+                const { data: lastAppt } = await supabase
+                  .from('appointments')
+                  .select('appointment_date')
+                  .eq('patient_id', patient.id)
+                  .eq('medic_id', currentUser.id)
+                  .order('appointment_date', { ascending: false })
+                  .limit(1)
+                  .single();
+
+                patient.appointmentCount = apptCount || 0;
+                patient.lastVisit = lastAppt?.appointment_date;
+              }
+            }
+
+            filteredPatients = patients || [];
+          }
+        } else {
+          // No search query - load all patients from database
+          const { data: patients, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('role', 'patient')
+            .order('full_name')
+            .limit(100);
+
+          if (error) {
+            console.error('Error loading patients:', error);
             container.innerHTML = `
               <div class="text-center py-12 text-red-500">
                 <i class="fas fa-exclamation-triangle text-5xl mb-4 opacity-50"></i>
                 <p class="text-lg font-medium mb-2">Error</p>
-                <p class="text-sm text-muted-foreground">Failed to lookup barcode. Please try again.</p>
+                <p class="text-sm text-muted-foreground">Failed to load patients. Please try again.</p>
               </div>
             `;
             return;
           }
-        } else {
-          // Normal name/email search
-          filteredPatients = patientsData.filter(p => 
-            p.full_name?.toLowerCase().includes(query) ||
-            p.email?.toLowerCase().includes(query)
-          );
+
+          // Get appointment counts for all patients
+          if (patients && patients.length > 0) {
+            for (const patient of patients) {
+              const { count: apptCount } = await supabase
+                .from('appointments')
+                .select('*', { count: 'exact', head: true })
+                .eq('patient_id', patient.id)
+                .eq('medic_id', currentUser.id);
+
+              const { data: lastAppt } = await supabase
+                .from('appointments')
+                .select('appointment_date')
+                .eq('patient_id', patient.id)
+                .eq('medic_id', currentUser.id)
+                .order('appointment_date', { ascending: false })
+                .limit(1)
+                .single();
+
+              patient.appointmentCount = apptCount || 0;
+              patient.lastVisit = lastAppt?.appointment_date;
+            }
+          }
+
+          filteredPatients = patients || [];
         }
-      }
 
-      if (filteredPatients.length === 0) {
+        if (filteredPatients.length === 0) {
+          container.innerHTML = `
+            <div class="text-center py-12 text-muted-foreground">
+              <i class="fas fa-users text-5xl mb-4 opacity-50"></i>
+              <p class="text-lg font-medium mb-2">${searchQuery ? 'No patients found' : 'No patients in database'}</p>
+              <p class="text-sm">${searchQuery ? 'Try a different search or enter a MediConnect Card barcode (MC...)' : 'All patients in the system will appear here'}</p>
+            </div>
+          `;
+          return;
+        }
+
         container.innerHTML = `
-          <div class="text-center py-12 text-muted-foreground">
-            <i class="fas fa-users text-5xl mb-4 opacity-50"></i>
-            <p class="text-lg font-medium mb-2">${searchQuery ? 'No patients found' : 'No patients yet'}</p>
-            <p class="text-sm">${searchQuery ? 'Try a different search or enter a MediConnect Card barcode (MC...)' : 'Patients will appear here after appointments'}</p>
-          </div>
-        `;
-        return;
-      }
-
-      container.innerHTML = `
-        <div class="grid md:grid-cols-2 gap-4">
-          ${filteredPatients.map(patient => `
-            <div class="patient-card p-4 rounded-lg border border-border hover:bg-accent/50 transition-all cursor-pointer" data-patient-id="${patient.id}" onclick="showPatientDetails('${patient.id}')">
-              <div class="flex items-start gap-3">
-                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
-                  ${patient.full_name?.charAt(0).toUpperCase() || 'P'}
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p class="font-semibold text-foreground truncate">${patient.full_name || 'Unknown'}</p>
-                  <p class="text-sm text-muted-foreground truncate">${patient.email}</p>
-                  <div class="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                    <span>
-                      <i class="fas fa-calendar-check mr-1"></i>
-                      ${patient.appointmentCount} ${patient.appointmentCount === 1 ? 'visit' : 'visits'}
-                    </span>
-                    ${patient.lastVisit ? `
+          <div class="grid md:grid-cols-2 gap-4">
+            ${filteredPatients.map(patient => `
+              <div class="patient-card p-4 rounded-lg border border-border hover:bg-accent/50 transition-all cursor-pointer" data-patient-id="${patient.id}" onclick="showPatientDetails('${patient.id}')">
+                <div class="flex items-start gap-3">
+                  <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
+                    ${patient.full_name?.charAt(0).toUpperCase() || 'P'}
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-foreground truncate">${patient.full_name || 'Unknown'}</p>
+                    <p class="text-sm text-muted-foreground truncate">${patient.email}</p>
+                    ${patient.cnp ? `<p class="text-xs text-muted-foreground mt-1">CNP: ${patient.cnp}</p>` : ''}
+                    <div class="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                       <span>
-                        <i class="fas fa-clock mr-1"></i>
-                        Last: ${new Date(patient.lastVisit).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        <i class="fas fa-calendar-check mr-1"></i>
+                        ${patient.appointmentCount || 0} ${patient.appointmentCount === 1 ? 'visit' : 'visits'}
                       </span>
-                    ` : ''}
+                      ${patient.lastVisit ? `
+                        <span>
+                          <i class="fas fa-clock mr-1"></i>
+                          Last: ${new Date(patient.lastVisit).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      ` : ''}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          `).join('')}
-        </div>
-      `;
+            `).join('')}
+          </div>
+        `;
+      } catch (error) {
+        console.error('Error rendering patients:', error);
+        container.innerHTML = `
+          <div class="text-center py-12 text-red-500">
+            <i class="fas fa-exclamation-triangle text-5xl mb-4 opacity-50"></i>
+            <p class="text-lg font-medium mb-2">Error</p>
+            <p class="text-sm text-muted-foreground">Failed to load patients. Please try again.</p>
+          </div>
+        `;
+      }
     }
 
     function showAppointmentDetails(appointment: any) {
@@ -1710,11 +1827,21 @@ const placeholderUser = { email: 'loading@example.com' };
       });
     });
 
-    // Patient search
+    // Patient search with debouncing
+    let searchTimeout: NodeJS.Timeout;
     const patientSearchInput = document.getElementById('patient-search') as HTMLInputElement;
     patientSearchInput?.addEventListener('input', (e) => {
       const query = (e.target as HTMLInputElement).value;
-      renderPatients(query);
+      
+      // Clear previous timeout
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+      
+      // Set new timeout for debounced search
+      searchTimeout = setTimeout(() => {
+        renderPatients(query);
+      }, 300); // 300ms debounce
     });
 
     // ============================================

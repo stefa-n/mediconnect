@@ -2038,13 +2038,29 @@ const placeholderUser = { email: 'loading@example.com' };
     async function deleteHospital(id: string) {
       const confirmed = await showConfirm(
         'Delete Hospital?',
-        'Are you sure you want to delete this hospital?\n\nThis action cannot be undone.',
+        'Are you sure you want to delete this hospital?\n\nThis action cannot be undone.\n\nAll hospital admins and medics will be converted to patient accounts.',
         { type: 'danger', confirmText: 'Delete', cancelText: 'Cancel' }
       );
       
       if (!confirmed) return;
 
       try {
+        // First, convert all affected users to patients
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ 
+            role: 'patient', 
+            hospital_id: null,
+            department: null 
+          })
+          .eq('hospital_id', id);
+
+        if (updateError) {
+          console.error('Error updating users:', updateError);
+          throw new Error('Failed to convert hospital users to patients');
+        }
+
+        // Now delete the hospital
         const { error } = await supabase
           .from('hospitals')
           .delete()
@@ -2052,15 +2068,12 @@ const placeholderUser = { email: 'loading@example.com' };
 
         if (error) {
           console.error('Error deleting hospital:', error);
-          if (error.code === '23503') {
-            throw new Error('Cannot delete hospital. It is currently assigned to administrators. Please reassign them first.');
-          }
           if (error.code === '42501') {
             throw new Error('Permission denied. Please ensure you have site administrator privileges.');
           }
           throw new Error(error.message || 'Failed to delete hospital');
         }
-        showToast('Hospital deleted successfully!', 'success');
+        showToast('Hospital deleted successfully! All associated users converted to patient accounts.', 'success');
         
         await loadHospitals();
         await loadUsers(); // Reload users in case any were affected
