@@ -1684,6 +1684,9 @@ const placeholderUser = { email: 'loading@example.com' };
       }
     }
 
+    // Expose to window for navbar access
+    (window as any).openAIChatModal = openAIChatModal;
+
     function closeAIChatModal() {
       const modal = document.getElementById('ai-chat-modal');
       const modalContent = document.getElementById('chat-modal-content');
