@@ -1,0 +1,374 @@
+---
+---
+
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">
+  <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6">Search Prescriptions</h2>
+  
+  <form id="searchForm" class="space-y-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Patient CNP
+        </label>
+        <input
+          type="text"
+          name="patientCNP"
+          maxlength="13"
+          pattern="[0-9]{13}"
+          class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500"
+          placeholder="1234567890123"
+        />
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Patient Name
+        </label>
+        <input
+          type="text"
+          name="patientName"
+          class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500"
+          placeholder="John Doe"
+        />
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Medication Name
+        </label>
+        <input
+          type="text"
+          name="medicationName"
+          class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500"
+          placeholder="Amoxicillin"
+        />
+      </div>
+    </div>
+    
+    <div class="flex gap-3">
+      <button
+        type="submit"
+        class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+      >
+        Search
+      </button>
+      <button
+        type="button"
+        onclick="clearSearch()"
+        class="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+      >
+        Clear
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Search Results -->
+<div id="searchResults" class="hidden">
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6">Search Results</h2>
+    <div id="resultsContainer"></div>
+  </div>
+</div>
+
+<script>
+  function clearSearch() {
+    document.getElementById('searchForm')?.reset();
+    document.getElementById('searchResults')?.classList.add('hidden');
+  }
+  
+  window.clearSearch = clearSearch;
+  
+  document.getElementById('searchForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target as HTMLFormElement);
+    const patientCNP = formData.get('patientCNP') as string;
+    const patientName = formData.get('patientName') as string;
+    const medicationName = formData.get('medicationName') as string;
+    
+    if (!patientCNP && !patientName && !medicationName) {
+      alert('Please enter at least one search criterion');
+      return;
+    }
+    
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        import.meta.env.PUBLIC_SUPABASE_URL,
+        import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+      );
+      
+      let query = supabase
+        .from('prescriptions')
+        .select(`
+          *,
+          patient:profiles!prescriptions_patient_id_fkey(id, full_name, cnp),
+          medic:profiles!prescriptions_medic_id_fkey(id, full_name, department)
+        `)
+        .eq('status', 'active')
+        .eq('is_invalidated', false);
+      
+      // Search by patient CNP
+      if (patientCNP) {
+        const { data: patient } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('cnp', patientCNP)
+          .single();
+        
+        if (patient) {
+          query = query.eq('patient_id', patient.id);
+        } else {
+          displayResults([]);
+          return;
+        }
+      }
+      
+      // Search by patient name
+      if (patientName) {
+        const { data: patients } = await supabase
+          .from('profiles')
+          .select('id')
+          .ilike('full_name', `%${patientName}%`);
+        
+        if (patients && patients.length > 0) {
+          query = query.in('patient_id', patients.map(p => p.id));
+        } else {
+          displayResults([]);
+          return;
+        }
+      }
+      
+      // Search by medication name
+      if (medicationName) {
+        query = query.ilike('medication_name', `%${medicationName}%`);
+      }
+      
+      const { data: prescriptions, error } = await query.order('prescribed_date', { ascending: false });
+      
+      if (error) throw error;
+      
+      displayResults(prescriptions || []);
+    } catch (error) {
+      alert('Error: ' + (error as Error).message);
+    }
+  });
+  
+  function displayResults(prescriptions) {
+    const resultsDiv = document.getElementById('searchResults');
+    const containerDiv = document.getElementById('resultsContainer');
+    
+    if (!resultsDiv || !containerDiv) return;
+    
+    if (prescriptions.length === 0) {
+      containerDiv.innerHTML = `
+        <div class="text-center py-12">
+          <div class="text-6xl mb-4">🔍</div>
+          <p class="text-gray-500 dark:text-gray-400 text-lg">No prescriptions found</p>
+        </div>
+      `;
+    } else {
+      containerDiv.innerHTML = prescriptions.map(p => `
+        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-4 hover:shadow-lg transition-shadow">
+          <div class="flex justify-between items-start mb-3">
+            <div>
+              <h3 class="font-bold text-gray-900 dark:text-white text-lg">${p.medication_name}</h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                Patient: ${p.patient?.full_name || 'Unknown'} ${p.patient?.cnp ? `(CNP: ${p.patient.cnp})` : ''}
+              </p>
+            </div>
+            <span class="px-3 py-1 rounded-full text-sm font-medium ${
+              p.is_invalidated ? 'bg-red-100 text-red-800' : 
+              p.doses_dispensed >= p.total_doses ? 'bg-gray-100 text-gray-800' :
+              'bg-green-100 text-green-800'
+            }">
+              ${p.is_invalidated ? 'Invalidated' : 
+                p.doses_dispensed >= p.total_doses ? 'Completed' : 
+                'Active'}
+            </span>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4 text-sm mb-4">
+            <div>
+              <span class="text-gray-500">Dosage:</span>
+              <span class="font-medium ml-2">${p.dosage}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Frequency:</span>
+              <span class="font-medium ml-2">${p.frequency}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Duration:</span>
+              <span class="font-medium ml-2">${p.duration || 'N/A'}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Doses:</span>
+              <span class="font-medium ml-2">${p.doses_dispensed}/${p.total_doses}</span>
+            </div>
+          </div>
+          
+          ${p.instructions ? `
+            <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border-l-4 border-blue-500">
+              <p class="text-sm text-gray-700 dark:text-gray-300">${p.instructions}</p>
+            </div>
+          ` : ''}
+          
+          <div class="flex gap-2 mt-4">
+            <button
+              onclick="viewPrescriptionDetails('${p.id}')"
+              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+            >
+              View Details
+            </button>
+            ${!p.is_invalidated && p.doses_dispensed < p.total_doses ? `
+              <button
+                onclick="dispenseDose('${p.id}')"
+                class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
+              >
+                Dispense Dose
+              </button>
+              <button
+                onclick="invalidatePrescription('${p.id}')"
+                class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
+              >
+                Invalidate
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    resultsDiv.classList.remove('hidden');
+  }
+  
+  window.displayResults = displayResults;
+  
+  async function viewPrescriptionDetails(prescriptionId) {
+    window.location.href = `/pharmacist/prescription/${prescriptionId}`;
+  }
+  
+  async function dispenseDose(prescriptionId) {
+    const notes = prompt('Enter any notes for this dispensation (optional):');
+    
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        import.meta.env.PUBLIC_SUPABASE_URL,
+        import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+      );
+      
+      // Get current user and pharmacy
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('pharmacy_id')
+        .eq('id', user.id)
+        .single();
+      
+      if (!profile?.pharmacy_id) throw new Error('No pharmacy assigned');
+      
+      // Get the current prescription
+      const { data: prescription, error: prescError } = await supabase
+        .from('prescriptions')
+        .select('doses_dispensed, total_doses, is_invalidated')
+        .eq('id', prescriptionId)
+        .single();
+      
+      if (prescError) throw prescError;
+      
+      if (prescription.is_invalidated) {
+        throw new Error('This prescription has been invalidated and cannot be dispensed');
+      }
+      
+      if (prescription.doses_dispensed >= prescription.total_doses) {
+        throw new Error('All doses have already been dispensed');
+      }
+      
+      const doseNumber = prescription.doses_dispensed + 1;
+      
+      // Create dispensation record
+      const { error: dispenseError } = await supabase
+        .from('prescription_dispensations')
+        .insert([{
+          prescription_id: prescriptionId,
+          pharmacy_id: profile.pharmacy_id,
+          pharmacist_id: user.id,
+          dose_number: doseNumber,
+          notes: notes || null
+        }]);
+      
+      if (dispenseError) throw dispenseError;
+      
+      // Update prescription doses_dispensed count
+      const newStatus = doseNumber >= prescription.total_doses ? 'completed' : 'active';
+      
+      const { error: updateError } = await supabase
+        .from('prescriptions')
+        .update({
+          doses_dispensed: doseNumber,
+          status: newStatus
+        })
+        .eq('id', prescriptionId);
+      
+      if (updateError) throw updateError;
+      
+      alert('Dose dispensed successfully!');
+      // Re-run the search to refresh results
+      document.getElementById('searchForm')?.dispatchEvent(new Event('submit'));
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  }
+  
+  async function invalidatePrescription(prescriptionId) {
+    const reason = prompt('Enter reason for invalidation:');
+    
+    if (!reason) {
+      alert('Reason is required to invalidate a prescription');
+      return;
+    }
+    
+    if (!confirm('Are you sure you want to invalidate this prescription? This action cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        import.meta.env.PUBLIC_SUPABASE_URL,
+        import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+      );
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      
+      const { error } = await supabase
+        .from('prescriptions')
+        .update({
+          is_invalidated: true,
+          invalidated_at: new Date().toISOString(),
+          invalidated_by: user.id,
+          invalidation_reason: reason,
+          status: 'cancelled'
+        })
+        .eq('id', prescriptionId);
+      
+      if (error) throw error;
+      
+      alert('Prescription invalidated successfully');
+      // Re-run the search to refresh results
+      document.getElementById('searchForm')?.dispatchEvent(new Event('submit'));
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  }
+  
+  window.viewPrescriptionDetails = viewPrescriptionDetails;
+  window.dispenseDose = dispenseDose;
+  window.invalidatePrescription = invalidatePrescription;
+</script>

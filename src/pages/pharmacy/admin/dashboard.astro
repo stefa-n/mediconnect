@@ -1,0 +1,744 @@
+---
+import MainLayout from '../../../layouts/main.astro';
+import Navbar from '../../../components/Navbar.astro';
+
+// Pass placeholder user for navbar (will be updated client-side)
+const placeholderUser = { email: 'loading@example.com' };
+---
+
+<MainLayout content={{ title: 'Pharmacy Admin Dashboard - MediConnect' }}>
+  <!-- Font Awesome for icons -->
+  <link 
+    rel="stylesheet" 
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
+  />
+  
+  <Navbar user={placeholderUser} />
+  
+  <div class="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <!-- Custom Toast Notifications -->
+    <div id="toast-container" class="fixed top-4 right-4 z-[100] space-y-3 pointer-events-none">
+      <!-- Toasts will be dynamically inserted here -->
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-screen" class="flex items-center justify-center min-h-screen">
+      <div class="relative">
+        <div class="flex flex-col items-center space-y-6">
+          <div class="relative">
+            <div class="absolute inset-0 w-24 h-24 rounded-full bg-green-500/20 animate-ping"></div>
+            <div class="absolute inset-2 w-20 h-20 rounded-full bg-green-500/30 animate-pulse"></div>
+            <div class="relative w-24 h-24 bg-gradient-to-br from-green-500 to-teal-600 rounded-full flex items-center justify-center shadow-2xl">
+              <i class="fas fa-pills text-white text-4xl animate-pulse"></i>
+            </div>
+          </div>
+          <div class="text-center">
+            <h2 class="text-2xl font-bold text-foreground mb-2">MediConnect</h2>
+            <p class="text-muted-foreground text-sm mb-4">Loading pharmacy dashboard...</p>
+            <div class="w-48 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-green-500 to-teal-600 rounded-full animate-progress"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard Content -->
+    <main id="dashboard-content" class="hidden container mx-auto px-4 py-8">
+      <!-- Welcome Section -->
+      <div class="mb-8">
+        <h2 class="text-3xl font-bold mb-2 text-foreground">
+          Welcome, <span id="admin-name">Admin</span>!
+        </h2>
+        <p class="text-muted-foreground flex items-center gap-2">
+          <i class="fas fa-pills"></i>
+          Pharmacy Administrator - <span id="pharmacy-name-header"></span>
+        </p>
+      </div>
+
+      <!-- Stats Grid - 3 cards in a row -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6" id="stats-grid">
+        <!-- Stats will be populated here -->
+      </div>
+
+      <!-- Pharmacy Information Card -->
+      <div class="bg-white rounded-xl shadow-lg border border-border overflow-hidden mb-6">
+        <div class="p-6 border-b border-border bg-gradient-to-r from-green-50 to-teal-50">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center shadow-lg">
+              <i class="fas fa-pills text-white text-2xl"></i>
+            </div>
+            <div>
+              <h2 class="text-2xl font-bold text-foreground">Pharmacy Information</h2>
+              <p class="text-sm text-muted-foreground">Manage your pharmacy details</p>
+            </div>
+          </div>
+        </div>
+        <div class="p-6">
+          <div id="pharmacy-details" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Pharmacists Section -->
+      <div class="bg-white rounded-xl shadow-lg border border-border overflow-hidden">
+        <div class="p-6 border-b border-border bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                <i class="fas fa-user-md text-white text-2xl"></i>
+              </div>
+              <div>
+                <h2 class="text-2xl font-bold text-foreground">Pharmacists</h2>
+                <p class="text-sm text-muted-foreground"><span id="pharmacists-count">0</span> pharmacists in your team</p>
+              </div>
+            </div>
+            <button 
+              onclick="openAddPharmacistModal()" 
+              class="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-medium shadow-lg hover:shadow-xl transition-all transform hover:scale-105 flex items-center gap-2"
+            >
+              <i class="fas fa-plus"></i>
+              <span>Add Pharmacist</span>
+            </button>
+          </div>
+        </div>
+        <div class="p-6">
+          <div id="pharmacists-list">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add Pharmacist Modal -->
+  <div id="add-pharmacist-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 p-4" style="display: none; align-items: center; justify-content: center;">
+    <div id="add-pharmacist-content" class="bg-card rounded-xl shadow-2xl max-w-md w-full border border-border transform transition-all scale-95 opacity-0">
+      <div class="p-6 border-b border-border">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xl font-bold text-foreground">Add Pharmacist</h3>
+          <button id="close-add-pharmacist-modal" class="text-muted-foreground hover:text-foreground transition-colors">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+      </div>
+      <div class="p-6 space-y-4">
+        <!-- User Search Section -->
+        <div id="pharmacist-user-search-section">
+          <label class="block text-sm font-medium text-foreground mb-2">
+            Search for User by Email
+          </label>
+          <div class="relative">
+            <input 
+              type="email" 
+              id="pharmacist-user-email-search" 
+              class="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Start typing email address..."
+              autocomplete="off"
+            />
+            <div class="absolute right-2 top-1/2 -translate-y-1/2">
+              <i id="pharmacist-search-spinner" class="fas fa-spinner fa-spin text-blue-600 hidden"></i>
+            </div>
+          </div>
+          <p class="text-xs text-muted-foreground mt-2">
+            ℹ️ Start typing to search for existing users
+          </p>
+          <div id="pharmacist-search-results-dropdown" class="hidden mt-1 max-h-60 overflow-y-auto border border-border rounded-lg bg-white shadow-lg"></div>
+        </div>
+
+        <!-- Pharmacist Form (shown after user selection) -->
+        <form id="add-pharmacist-form" class="hidden space-y-4">
+          <input type="hidden" id="pharmacist-user-id" />
+          
+          <div>
+            <label class="block text-sm font-medium text-foreground mb-2">Email</label>
+            <input 
+              type="email" 
+              id="pharmacist-email" 
+              readonly
+              class="w-full px-4 py-2 border border-border rounded-lg bg-gray-50 text-gray-600"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-foreground mb-2">Full Name *</label>
+            <input 
+              type="text" 
+              id="pharmacist-fullname" 
+              required
+              class="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter full name"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-foreground mb-2">CNP (Optional)</label>
+            <input 
+              type="text" 
+              id="pharmacist-cnp"
+              maxlength="13"
+              pattern="[0-9]{13}"
+              class="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="1234567890123"
+            />
+            <p class="text-xs text-gray-500 mt-1">13 digits</p>
+          </div>
+          <div class="flex gap-3 pt-4">
+            <button 
+              type="submit"
+              class="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-colors"
+            >
+              <i class="fas fa-user-plus mr-2"></i>
+              Add Pharmacist
+            </button>
+            <button 
+              type="button"
+              id="cancel-add-pharmacist-btn"
+              class="px-4 py-2 border border-border rounded-lg hover:bg-accent transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { supabase } from '../../../lib/supabase';
+    import { PharmacyService } from '../../../lib/admin/pharmacyService';
+
+    // Custom Toast Notification System
+    type ToastType = 'success' | 'error' | 'warning' | 'info';
+    
+    function showToast(message: string, type: ToastType = 'info', duration: number = 4000) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = 'pointer-events-auto transform translate-x-full transition-all duration-300 ease-out';
+      
+      const icons = {
+        success: { icon: 'fa-check-circle', bgColor: 'bg-green-500', textColor: 'text-green-50' },
+        error: { icon: 'fa-times-circle', bgColor: 'bg-red-500', textColor: 'text-red-50' },
+        warning: { icon: 'fa-exclamation-triangle', bgColor: 'bg-orange-500', textColor: 'text-orange-50' },
+        info: { icon: 'fa-info-circle', bgColor: 'bg-blue-500', textColor: 'text-blue-50' }
+      };
+
+      const config = icons[type];
+      
+      toast.innerHTML = `
+        <div class="flex items-start gap-3 ${config.bgColor} ${config.textColor} px-5 py-4 rounded-xl shadow-2xl min-w-[300px] max-w-md backdrop-blur-sm border border-white/20">
+          <i class="fas ${config.icon} text-xl mt-0.5 flex-shrink-0"></i>
+          <p class="flex-1 font-medium leading-relaxed">${message}</p>
+          <button onclick="this.closest('[class*=translate]').remove()" class="ml-2 hover:opacity-80 transition-opacity flex-shrink-0">
+            <i class="fas fa-times text-sm"></i>
+          </button>
+        </div>
+      `;
+      
+      container.appendChild(toast);
+      
+      // Trigger entrance animation
+      setTimeout(() => {
+        toast.classList.remove('translate-x-full');
+        toast.classList.add('translate-x-0');
+      }, 10);
+      
+      // Auto remove after duration
+      setTimeout(() => {
+        toast.classList.add('translate-x-full', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+    }
+
+    // Store current pharmacy ID globally
+    let currentPharmacyId: string;
+
+    async function loadDashboard() {
+      try {
+        // Check authentication
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        
+        if (authError || !user) {
+          console.error('Not authenticated:', authError);
+          window.location.href = '/auth';
+          return;
+        }
+
+        // Get user profile
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError || !profile) {
+          console.error('Error fetching profile:', profileError);
+          window.location.href = '/dashboard';
+          return;
+        }
+
+        if (profile.role !== 'pharmacy_admin') {
+          console.error('Not a pharmacy admin');
+          window.location.href = '/dashboard';
+          return;
+        }
+
+        if (!profile.pharmacy_id) {
+          console.error('No pharmacy assigned');
+          window.location.href = '/dashboard';
+          return;
+        }
+
+        // Store pharmacy ID globally
+        currentPharmacyId = profile.pharmacy_id;
+
+        // Update admin name
+        const adminNameEl = document.getElementById('admin-name');
+        if (adminNameEl) {
+          adminNameEl.textContent = profile.full_name || user.email?.split('@')[0] || 'Admin';
+        }
+
+        // Get pharmacy information
+        const pharmacyService = new PharmacyService(supabase);
+        const pharmacy = await pharmacyService.getById(profile.pharmacy_id);
+
+        if (!pharmacy) {
+          console.error('Pharmacy not found');
+          window.location.href = '/dashboard';
+          return;
+        }
+
+        // Update pharmacy name in header
+        const pharmacyNameHeaderEl = document.getElementById('pharmacy-name-header');
+        if (pharmacyNameHeaderEl) {
+          pharmacyNameHeaderEl.textContent = pharmacy.name;
+        }
+
+        // Populate pharmacy details
+        const detailsContainer = document.getElementById('pharmacy-details');
+        if (detailsContainer) {
+          detailsContainer.innerHTML = `
+            <div class="group">
+              <p class="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-2">
+                <i class="fas fa-pills text-green-500"></i>
+                Pharmacy Name
+              </p>
+              <p class="text-lg font-semibold text-foreground">${pharmacy.name}</p>
+            </div>
+            ${pharmacy.address ? `
+              <div class="group">
+                <p class="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-2">
+                  <i class="fas fa-map-marker-alt text-red-500"></i>
+                  Address
+                </p>
+                <p class="text-lg font-semibold text-foreground">${pharmacy.address}</p>
+              </div>
+            ` : ''}
+            ${pharmacy.phone ? `
+              <div class="group">
+                <p class="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-2">
+                  <i class="fas fa-phone text-blue-500"></i>
+                  Phone
+                </p>
+                <p class="text-lg font-semibold text-foreground">${pharmacy.phone}</p>
+              </div>
+            ` : ''}
+            ${pharmacy.email ? `
+              <div class="group">
+                <p class="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-2">
+                  <i class="fas fa-envelope text-purple-500"></i>
+                  Email
+                </p>
+                <p class="text-lg font-semibold text-foreground">${pharmacy.email}</p>
+              </div>
+            ` : ''}
+          `;
+        }
+
+        // Get and display stats
+        const stats = await pharmacyService.getStats(profile.pharmacy_id);
+        const statsGrid = document.getElementById('stats-grid');
+        if (statsGrid && stats) {
+          statsGrid.innerHTML = `
+            <div class="bg-white rounded-xl shadow-lg border border-border p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+              <div class="flex items-center justify-between mb-3">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
+                  <i class="fas fa-user-md text-white text-xl"></i>
+                </div>
+                <div class="text-right">
+                  <p class="text-3xl font-bold text-foreground">${stats.pharmacists || 0}</p>
+                  <p class="text-sm text-muted-foreground mt-1">Pharmacists</p>
+                </div>
+              </div>
+              <div class="h-1 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full"></div>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg border border-border p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+              <div class="flex items-center justify-between mb-3">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg">
+                  <i class="fas fa-pills text-white text-xl"></i>
+                </div>
+                <div class="text-right">
+                  <p class="text-3xl font-bold text-foreground">${stats.dispensationsThisMonth || 0}</p>
+                  <p class="text-sm text-muted-foreground mt-1">This Month</p>
+                </div>
+              </div>
+              <div class="h-1 bg-gradient-to-r from-green-500 to-green-600 rounded-full"></div>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg border border-border p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+              <div class="flex items-center justify-between mb-3">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg">
+                  <i class="fas fa-chart-line text-white text-xl"></i>
+                </div>
+                <div class="text-right">
+                  <p class="text-3xl font-bold text-foreground">${stats.totalDispensations || 0}</p>
+                  <p class="text-sm text-muted-foreground mt-1">Total Dispensations</p>
+                </div>
+              </div>
+              <div class="h-1 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full"></div>
+            </div>
+          `;
+        }
+
+        // Get and display pharmacists
+        await loadPharmacists();
+
+        // Hide loading, show content
+        document.getElementById('loading-screen')?.classList.add('hidden');
+        document.getElementById('dashboard-content')?.classList.remove('hidden');
+
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+        window.location.href = '/dashboard';
+      }
+    }
+
+    async function loadPharmacists() {
+      if (!currentPharmacyId) return;
+
+      const pharmacyService = new PharmacyService(supabase);
+      const pharmacists = await pharmacyService.getPharmacists(currentPharmacyId);
+      
+      const pharmacistsCountEl = document.getElementById('pharmacists-count');
+      if (pharmacistsCountEl) {
+        pharmacistsCountEl.textContent = (pharmacists?.length || 0).toString();
+      }
+
+      const pharmacistsList = document.getElementById('pharmacists-list');
+      if (pharmacistsList) {
+        if (pharmacists && pharmacists.length > 0) {
+          pharmacistsList.innerHTML = `
+            <div class="space-y-3">
+              ${pharmacists.map((p, index) => `
+                <div class="flex items-center justify-between p-4 rounded-lg border border-border hover:border-blue-300 hover:bg-blue-50/50 transition-all duration-200 group" style="animation: fadeInUp 0.3s ease-out ${index * 0.1}s both;">
+                  <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-lg group-hover:scale-110 transition-transform">
+                      ${(p.full_name || 'U').charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p class="font-semibold text-foreground text-lg">${p.full_name || 'N/A'}</p>
+                      <p class="text-sm text-muted-foreground flex items-center gap-2">
+                        <i class="fas fa-envelope text-xs"></i>
+                        ${p.email}
+                      </p>
+                    </div>
+                  </div>
+                  <span class="px-4 py-2 text-sm font-medium rounded-full bg-gradient-to-r from-green-100 to-teal-100 text-green-700 border border-green-200 shadow-sm">
+                    <i class="fas fa-user-md mr-1"></i>
+                    Pharmacist
+                  </span>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        } else {
+          pharmacistsList.innerHTML = `
+            <div class="text-center py-12">
+              <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 mb-4">
+                <i class="fas fa-user-md text-gray-400 text-3xl"></i>
+              </div>
+              <p class="text-muted-foreground text-lg font-medium mb-2">No Pharmacists Yet</p>
+              <p class="text-sm text-muted-foreground">Click "Add Pharmacist" to get started</p>
+            </div>
+          `;
+        }
+      }
+    }
+
+    function openAddPharmacistModal() {
+      // Reset and show search section, hide form
+      const searchSection = document.getElementById('pharmacist-user-search-section');
+      const form = document.getElementById('add-pharmacist-form');
+      const searchInput = document.getElementById('pharmacist-user-email-search') as HTMLInputElement;
+      const dropdown = document.getElementById('pharmacist-search-results-dropdown');
+      
+      searchSection?.classList.remove('hidden');
+      form?.classList.add('hidden');
+      dropdown?.classList.add('hidden');
+      if (searchInput) searchInput.value = '';
+      (form as HTMLFormElement)?.reset();
+      
+      const modal = document.getElementById('add-pharmacist-modal');
+      if (modal) {
+        modal.style.display = 'flex';
+        setTimeout(() => {
+          const content = document.getElementById('add-pharmacist-content');
+          if (content) {
+            content.style.transform = 'scale(1)';
+            content.style.opacity = '1';
+          }
+          searchInput?.focus();
+        }, 10);
+      }
+    }
+
+    function closeAddPharmacistModal() {
+      const modal = document.getElementById('add-pharmacist-modal');
+      const content = document.getElementById('add-pharmacist-content');
+      
+      if (content) {
+        content.style.transform = 'scale(0.95)';
+        content.style.opacity = '0';
+      }
+      
+      setTimeout(() => {
+        if (modal) {
+          modal.style.display = 'none';
+        }
+        (document.getElementById('add-pharmacist-form') as HTMLFormElement)?.reset();
+      }, 200);
+    }
+
+    async function liveSearchPharmacistUsers(query: string) {
+      const dropdown = document.getElementById('pharmacist-search-results-dropdown');
+      const spinner = document.getElementById('pharmacist-search-spinner');
+      
+      if (!dropdown || !spinner) return;
+
+      // Clear if query is too short
+      if (query.length < 2) {
+        dropdown.classList.add('hidden');
+        dropdown.innerHTML = '';
+        return;
+      }
+
+      // Show loading
+      spinner.classList.remove('hidden');
+
+      try {
+        const { data: profiles, error } = await supabase
+          .from('profiles')
+          .select('id, email, full_name, cnp, role, pharmacy_id')
+          .ilike('email', `%${query}%`)
+          .limit(10);
+
+        spinner.classList.add('hidden');
+
+        if (error) {
+          console.error('Error searching users:', error);
+          dropdown.innerHTML = '<div class="p-3 text-sm text-red-600">❌ Error searching users</div>';
+          dropdown.classList.remove('hidden');
+          return;
+        }
+
+        // Filter out users who already have pharmacist role or are assigned to a pharmacy
+        const availableProfiles = (profiles || []).filter(p => 
+          p.role === 'patient' || (p.role === 'pharmacist' && !p.pharmacy_id)
+        );
+
+        if (availableProfiles.length === 0) {
+          dropdown.innerHTML = '<div class="p-3 text-sm text-yellow-600">No eligible users found. Only patients or unassigned pharmacists can be assigned.</div>';
+          dropdown.classList.remove('hidden');
+          return;
+        }
+
+        dropdown.innerHTML = availableProfiles.map(profile => `
+          <div 
+            class="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+            data-user-id="${profile.id}"
+            data-user-email="${profile.email}"
+            data-user-name="${profile.full_name || ''}"
+            data-user-cnp="${profile.cnp || ''}"
+            onclick="selectPharmacistFromSearch(this)"
+          >
+            <div class="flex items-start justify-between">
+              <div class="flex-1">
+                <p class="text-sm font-medium text-gray-900">${profile.email}</p>
+                ${profile.full_name ? `<p class="text-xs text-gray-500 mt-0.5">${profile.full_name}</p>` : ''}
+                <p class="text-xs text-gray-400 mt-0.5">
+                  <i class="fas fa-user-tag mr-1"></i>${profile.role === 'patient' ? 'Patient' : 'Pharmacist'}
+                </p>
+              </div>
+              <i class="fas fa-chevron-right text-gray-400 text-xs mt-1"></i>
+            </div>
+          </div>
+        `).join('');
+        
+        dropdown.classList.remove('hidden');
+
+      } catch (error) {
+        console.error('Error in live search:', error);
+        spinner.classList.add('hidden');
+        dropdown.innerHTML = '<div class="p-3 text-sm text-red-600">❌ Search failed</div>';
+        dropdown.classList.remove('hidden');
+      }
+    }
+
+    function selectPharmacistFromSearch(element: HTMLElement) {
+      const userId = element.dataset.userId;
+      const email = element.dataset.userEmail;
+      const fullName = element.dataset.userName;
+      const cnp = element.dataset.userCnp;
+
+      // Populate form
+      (document.getElementById('pharmacist-user-id') as HTMLInputElement).value = userId || '';
+      (document.getElementById('pharmacist-email') as HTMLInputElement).value = email || '';
+      (document.getElementById('pharmacist-fullname') as HTMLInputElement).value = fullName || '';
+      (document.getElementById('pharmacist-cnp') as HTMLInputElement).value = cnp || '';
+
+      // Hide search, show form
+      const userSearchSection = document.getElementById('pharmacist-user-search-section');
+      const userForm = document.getElementById('add-pharmacist-form');
+      const dropdown = document.getElementById('pharmacist-search-results-dropdown');
+      
+      userSearchSection?.classList.add('hidden');
+      userForm?.classList.remove('hidden');
+      dropdown?.classList.add('hidden');
+    }
+
+    async function savePharmacist(e: Event) {
+      e.preventDefault();
+      
+      if (!currentPharmacyId) {
+        showToast('No pharmacy ID found', 'error');
+        return;
+      }
+
+      const userId = (document.getElementById('pharmacist-user-id') as HTMLInputElement).value;
+      const fullName = (document.getElementById('pharmacist-fullname') as HTMLInputElement).value;
+      const cnp = (document.getElementById('pharmacist-cnp') as HTMLInputElement).value;
+
+      if (!userId) {
+        showToast('No user selected. Please search for a user first.', 'error');
+        return;
+      }
+
+      // Disable form during submission
+      const submitBtn = document.querySelector('#add-pharmacist-form button[type="submit"]') as HTMLButtonElement;
+      const originalBtnContent = submitBtn?.innerHTML;
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
+      }
+
+      try {
+        const updateData: any = {
+          full_name: fullName,
+          cnp: cnp || null,
+          role: 'pharmacist',
+          pharmacy_id: currentPharmacyId,
+        };
+
+        console.log('Saving pharmacist with data:', updateData);
+
+        const { data, error } = await supabase
+          .from('profiles')
+          .update(updateData)
+          .eq('id', userId)
+          .select();
+
+        if (error) {
+          console.error('Supabase error:', error);
+          if (error.code === '42501') {
+            throw new Error('Permission denied. You need administrator privileges.');
+          }
+          throw error;
+        }
+
+        console.log('Update successful:', data);
+        showToast('Pharmacist added successfully!', 'success');
+        closeAddPharmacistModal();
+        
+        // Clear the form
+        const form = document.getElementById('add-pharmacist-form') as HTMLFormElement;
+        form?.reset();
+        (document.getElementById('pharmacist-user-id') as HTMLInputElement).value = '';
+        
+        await loadPharmacists();
+      } catch (error: any) {
+        console.error('Error saving pharmacist:', error);
+        showToast(error.message || 'Failed to save pharmacist. Please try again.', 'error');
+      } finally {
+        // Re-enable form
+        if (submitBtn && originalBtnContent) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnContent;
+        }
+      }
+    }
+
+    // Make functions global
+    (window as any).openAddPharmacistModal = openAddPharmacistModal;
+    (window as any).selectPharmacistFromSearch = selectPharmacistFromSearch;
+
+    // Event listeners
+    document.getElementById('close-add-pharmacist-modal')?.addEventListener('click', closeAddPharmacistModal);
+    document.getElementById('cancel-add-pharmacist-btn')?.addEventListener('click', closeAddPharmacistModal);
+    document.getElementById('add-pharmacist-form')?.addEventListener('submit', savePharmacist);
+
+    // Live search with debouncing
+    let pharmacistSearchDebounceTimer: number | undefined;
+    const pharmacistSearchInput = document.getElementById('pharmacist-user-email-search') as HTMLInputElement;
+    pharmacistSearchInput?.addEventListener('input', (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      const query = target.value.trim();
+      
+      // Clear previous timer
+      if (pharmacistSearchDebounceTimer) {
+        clearTimeout(pharmacistSearchDebounceTimer);
+      }
+      
+      // Debounce search - wait 300ms after user stops typing
+      pharmacistSearchDebounceTimer = window.setTimeout(() => {
+        liveSearchPharmacistUsers(query);
+      }, 300);
+    });
+
+    // Click outside dropdown to close
+    document.addEventListener('click', (e: Event) => {
+      const dropdown = document.getElementById('pharmacist-search-results-dropdown');
+      const searchInput = document.getElementById('pharmacist-user-email-search');
+      
+      if (dropdown && searchInput && 
+          !dropdown.contains(e.target as Node) && 
+          e.target !== searchInput) {
+        dropdown.classList.add('hidden');
+      }
+    });
+
+    // Load dashboard on page load
+    loadDashboard();
+  </script>
+
+  <style>
+    @keyframes progress {
+      0% { width: 0%; }
+      100% { width: 100%; }
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-progress {
+      animation: progress 1.5s ease-in-out infinite;
+    }
+  </style>
+</MainLayout>

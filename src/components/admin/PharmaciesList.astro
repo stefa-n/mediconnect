@@ -1,0 +1,361 @@
+---
+import type { Pharmacy } from '../../../lib/types';
+
+interface Props {
+  pharmacies: Pharmacy[];
+}
+
+const { pharmacies } = Astro.props;
+---
+
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Pharmacies</h2>
+    <button
+      onclick="showAddPharmacyModal()"
+      class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+    >
+      <span>+</span>
+      <span>Add Pharmacy</span>
+    </button>
+  </div>
+
+  {pharmacies.length === 0 ? (
+    <div class="text-center py-12">
+      <div class="text-6xl mb-4">💊</div>
+      <p class="text-gray-500 dark:text-gray-400 text-lg">No pharmacies yet</p>
+      <p class="text-gray-400 dark:text-gray-500 text-sm mt-2">
+        Add your first pharmacy to get started
+      </p>
+    </div>
+  ) : (
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {pharmacies.map((pharmacy) => (
+        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-lg transition-shadow">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <h3 class="font-bold text-gray-900 dark:text-white text-lg">
+                {pharmacy.name}
+              </h3>
+              {pharmacy.address && (
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  📍 {pharmacy.address}
+                </p>
+              )}
+            </div>
+          </div>
+          
+          <div class="space-y-1 text-sm">
+            {pharmacy.phone && (
+              <p class="text-gray-600 dark:text-gray-400">
+                📞 {pharmacy.phone}
+              </p>
+            )}
+            {pharmacy.email && (
+              <p class="text-gray-600 dark:text-gray-400">
+                ✉️ {pharmacy.email}
+              </p>
+            )}
+          </div>
+          
+          <div class="mt-4 flex gap-2">
+            <button
+              onclick={`viewPharmacy('${pharmacy.id}')`}
+              class="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+            >
+              View Details
+            </button>
+            <button
+              onclick={`assignPharmacyAdmin('${pharmacy.id}', '${pharmacy.name}')`}
+              class="flex-1 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-colors"
+            >
+              Assign Admin
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+
+<!-- Add Pharmacy Modal -->
+<div id="addPharmacyModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
+  <div class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+      <div class="p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-xl font-bold text-gray-900 dark:text-white">Add Pharmacy</h3>
+          <button onclick="hideAddPharmacyModal()" class="text-gray-500 hover:text-gray-700">
+            ✕
+          </button>
+        </div>
+        
+        <form id="addPharmacyForm" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Pharmacy Name *
+            </label>
+            <input
+              type="text"
+              name="name"
+              required
+              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500"
+              placeholder="Green Valley Pharmacy"
+            />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Address
+            </label>
+            <input
+              type="text"
+              name="address"
+              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500"
+              placeholder="123 Main St, City"
+            />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Phone
+            </label>
+            <input
+              type="tel"
+              name="phone"
+              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500"
+              placeholder="+1234567890"
+            />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Email
+            </label>
+            <input
+              type="email"
+              name="email"
+              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500"
+              placeholder="contact@pharmacy.com"
+            />
+          </div>
+          
+          <div class="flex gap-3 mt-6">
+            <button
+              type="button"
+              onclick="hideAddPharmacyModal()"
+              class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+            >
+              Add Pharmacy
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Admin Modal -->
+<div id="assignAdminModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
+  <div class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+      <div class="p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-xl font-bold text-gray-900 dark:text-white">
+            Assign Pharmacy Admin
+          </h3>
+          <button onclick="hideAssignAdminModal()" class="text-gray-500 hover:text-gray-700">
+            ✕
+          </button>
+        </div>
+        
+        <p class="text-gray-600 dark:text-gray-400 mb-4">
+          Pharmacy: <span id="assignPharmacyName" class="font-semibold"></span>
+        </p>
+        
+        <form id="assignAdminForm" class="space-y-4">
+          <input type="hidden" id="assignPharmacyId" name="pharmacy_id" />
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Email *
+            </label>
+            <input
+              type="email"
+              name="email"
+              required
+              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+              placeholder="admin@example.com"
+            />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Full Name *
+            </label>
+            <input
+              type="text"
+              name="full_name"
+              required
+              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+              placeholder="John Doe"
+            />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              CNP (Optional)
+            </label>
+            <input
+              type="text"
+              name="cnp"
+              maxlength="13"
+              pattern="[0-9]{13}"
+              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+              placeholder="1234567890123"
+            />
+          </div>
+          
+          <div class="flex gap-3 mt-6">
+            <button
+              type="button"
+              onclick="hideAssignAdminModal()"
+              class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+            >
+              Assign Admin
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showAddPharmacyModal() {
+    document.getElementById('addPharmacyModal')?.classList.remove('hidden');
+  }
+  
+  function hideAddPharmacyModal() {
+    document.getElementById('addPharmacyModal')?.classList.add('hidden');
+    (document.getElementById('addPharmacyForm') as HTMLFormElement)?.reset();
+  }
+  
+  function showAssignAdminModal() {
+    document.getElementById('assignAdminModal')?.classList.remove('hidden');
+  }
+  
+  function hideAssignAdminModal() {
+    document.getElementById('assignAdminModal')?.classList.add('hidden');
+    (document.getElementById('assignAdminForm') as HTMLFormElement)?.reset();
+  }
+  
+  function viewPharmacy(pharmacyId: string) {
+    window.location.href = `/admin/site/pharmacy/${pharmacyId}`;
+  }
+  
+  function assignPharmacyAdmin(pharmacyId: string, pharmacyName: string) {
+    (document.getElementById('assignPharmacyId') as HTMLInputElement).value = pharmacyId;
+    (document.getElementById('assignPharmacyName') as HTMLElement).textContent = pharmacyName;
+    showAssignAdminModal();
+  }
+  
+  // Make functions globally available
+  (window as any).showAddPharmacyModal = showAddPharmacyModal;
+  (window as any).hideAddPharmacyModal = hideAddPharmacyModal;
+  (window as any).viewPharmacy = viewPharmacy;
+  (window as any).assignPharmacyAdmin = assignPharmacyAdmin;
+  (window as any).hideAssignAdminModal = hideAssignAdminModal;
+  
+  // Handle pharmacy creation
+  document.getElementById('addPharmacyForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target as HTMLFormElement);
+    const data = {
+      name: formData.get('name'),
+      address: formData.get('address') || null,
+      phone: formData.get('phone') || null,
+      email: formData.get('email') || null,
+    };
+    
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        import.meta.env.PUBLIC_SUPABASE_URL,
+        import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+      );
+      
+      const { error } = await supabase
+        .from('pharmacies')
+        .insert([data]);
+      
+      if (error) throw error;
+      
+      window.location.reload();
+    } catch (error) {
+      alert('Error: ' + (error as Error).message);
+    }
+  });
+  
+  // Handle admin assignment
+  document.getElementById('assignAdminForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target as HTMLFormElement);
+    const email = formData.get('email') as string;
+    const full_name = formData.get('full_name') as string;
+    const cnp = formData.get('cnp') as string | null;
+    const pharmacy_id = formData.get('pharmacy_id') as string;
+    
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        import.meta.env.PUBLIC_SUPABASE_URL,
+        import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+      );
+      
+      // Create user in auth
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: email,
+        email_confirm: true,
+        user_metadata: {
+          full_name: full_name,
+        },
+      });
+      
+      if (authError) throw new Error('Failed to create user: ' + authError.message);
+      
+      // Create profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([{
+          id: authData.user.id,
+          email: email,
+          full_name: full_name,
+          cnp: cnp,
+          role: 'pharmacy_admin',
+          pharmacy_id: pharmacy_id,
+        }]);
+      
+      if (profileError) throw profileError;
+      
+      alert('Pharmacy admin assigned successfully!');
+      hideAssignAdminModal();
+    } catch (error) {
+      alert('Error: ' + (error as Error).message);
+    }
+  });
+</script>

@@ -117,6 +117,14 @@ const placeholderUser = { email: 'loading@example.com' };
             redirectPath = '/admin/site/dashboard';
             break;
           
+          case 'pharmacy_admin':
+            redirectPath = '/pharmacy/admin/dashboard';
+            break;
+          
+          case 'pharmacist':
+            redirectPath = '/pharmacist/dashboard';
+            break;
+          
           default:
             // If no role assigned yet, show message
             if (!profile.role) {

@@ -1,0 +1,52 @@
+---
+import type { PharmacyStats } from '../../../lib/admin/pharmacyService';
+
+interface Props {
+  stats: PharmacyStats;
+}
+
+const { stats } = Astro.props;
+
+const statsData = [
+  {
+    title: 'Admins',
+    value: stats.admins,
+    icon: '👥',
+    color: 'from-blue-500 to-blue-600'
+  },
+  {
+    title: 'Pharmacists',
+    value: stats.pharmacists,
+    icon: '💊',
+    color: 'from-green-500 to-green-600'
+  },
+  {
+    title: 'Total Dispensations',
+    value: stats.totalDispensations,
+    icon: '📋',
+    color: 'from-purple-500 to-purple-600'
+  },
+  {
+    title: 'This Month',
+    value: stats.dispensationsThisMonth,
+    icon: '📅',
+    color: 'from-orange-500 to-orange-600'
+  }
+];
+---
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+  {statsData.map((stat) => (
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+      <div class={`bg-gradient-to-r ${stat.color} p-4`}>
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-white text-sm font-medium opacity-90">{stat.title}</p>
+            <p class="text-white text-3xl font-bold mt-2">{stat.value}</p>
+          </div>
+          <div class="text-4xl opacity-80">{stat.icon}</div>
+        </div>
+      </div>
+    </div>
+  ))}
+</div>

@@ -1,0 +1,198 @@
+---
+import type { PatientProfile } from '../../../lib/types';
+
+interface Props {
+  pharmacists: PatientProfile[];
+  pharmacyId: string;
+}
+
+const { pharmacists, pharmacyId } = Astro.props;
+---
+
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Pharmacists</h2>
+    <button
+      onclick="showAddPharmacistModal()"
+      class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+    >
+      <span>+</span>
+      <span>Add Pharmacist</span>
+    </button>
+  </div>
+
+  {pharmacists.length === 0 ? (
+    <div class="text-center py-12">
+      <div class="text-6xl mb-4">💊</div>
+      <p class="text-gray-500 dark:text-gray-400 text-lg">No pharmacists yet</p>
+      <p class="text-gray-400 dark:text-gray-500 text-sm mt-2">
+        Add pharmacists to manage prescriptions
+      </p>
+    </div>
+  ) : (
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {pharmacists.map((pharmacist) => (
+        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-lg transition-shadow">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
+                {pharmacist.full_name?.[0]?.toUpperCase() || '?'}
+              </div>
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white">
+                  {pharmacist.full_name || 'No name'}
+                </h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{pharmacist.email}</p>
+              </div>
+            </div>
+          </div>
+          
+          {pharmacist.cnp && (
+            <div class="mt-2">
+              <p class="text-xs text-gray-500 dark:text-gray-400">CNP: {pharmacist.cnp}</p>
+            </div>
+          )}
+          
+          <div class="mt-4 text-xs text-gray-400 dark:text-gray-500">
+            Added {new Date(pharmacist.created_at).toLocaleDateString()}
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+
+<!-- Add Pharmacist Modal -->
+<div id="addPharmacistModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
+  <div class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+    <div class="p-6">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold text-gray-900 dark:text-white">Add Pharmacist</h3>
+        <button onclick="hideAddPharmacistModal()" class="text-gray-500 hover:text-gray-700">
+          ✕
+        </button>
+      </div>
+      
+      <form id="addPharmacistForm" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Email
+          </label>
+          <input
+            type="email"
+            name="email"
+            required
+            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500"
+            placeholder="pharmacist@example.com"
+          />
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Full Name
+          </label>
+          <input
+            type="text"
+            name="full_name"
+            required
+            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500"
+            placeholder="John Doe"
+          />
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            CNP (Optional)
+          </label>
+          <input
+            type="text"
+            name="cnp"
+            maxlength="13"
+            pattern="[0-9]{13}"
+            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500"
+            placeholder="1234567890123"
+          />
+          <p class="text-xs text-gray-500 mt-1">13 digits</p>
+        </div>
+        
+        <div class="flex gap-3 mt-6">
+          <button
+            type="button"
+            onclick="hideAddPharmacistModal()"
+            class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+          >
+            Add Pharmacist
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  </div>
+</div>
+
+<script define:vars={{ pharmacyId }}>
+  function showAddPharmacistModal() {
+    document.getElementById('addPharmacistModal').classList.remove('hidden');
+  }
+  
+  function hideAddPharmacistModal() {
+    document.getElementById('addPharmacistModal').classList.add('hidden');
+    document.getElementById('addPharmacistForm').reset();
+  }
+  
+  window.showAddPharmacistModal = showAddPharmacistModal;
+  window.hideAddPharmacistModal = hideAddPharmacistModal;
+  
+  document.getElementById('addPharmacistForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const email = formData.get('email');
+    const full_name = formData.get('full_name');
+    const cnp = formData.get('cnp') || null;
+    
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        import.meta.env.PUBLIC_SUPABASE_URL,
+        import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+      );
+      
+      // Create user in auth
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: email,
+        email_confirm: true,
+        user_metadata: {
+          full_name: full_name,
+        },
+      });
+      
+      if (authError) throw new Error('Failed to create user: ' + authError.message);
+      
+      // Create profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([{
+          id: authData.user.id,
+          email: email,
+          full_name: full_name,
+          cnp: cnp,
+          role: 'pharmacist',
+          pharmacy_id: pharmacyId,
+        }]);
+      
+      if (profileError) throw profileError;
+      
+      window.location.reload();
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  });
+</script>
