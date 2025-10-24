@@ -124,24 +124,24 @@ const placeholderUser = { email: 'loading@example.com' };
       <!-- Main Content Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <!-- Quick Actions -->
-        <div class="lg:col-span-1">
+        <div class="lg:col-span-1 h-fit">
           <QuickActions delay={500} />
         </div>
         
         <!-- Medical Records / Other Info (2 columns) -->
         <div class="lg:col-span-2">
-          <div class="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
+          <div class="bg-card rounded-xl shadow-lg border border-border overflow-hidden h-fit">
             <div class="p-6 border-b border-border bg-gradient-to-r from-purple-50 to-pink-50">
               <h3 class="text-xl font-bold text-foreground flex items-center gap-2">
                 <i class="fas fa-file-medical text-purple-600"></i>
-                Medical Records
+                Medical History
               </h3>
               <p class="text-sm text-muted-foreground mt-1">Your health records and visit history</p>
             </div>
-            <div class="p-6">
+            <div id="medical-records-container" class="p-6 max-h-[400px] overflow-y-auto">
               <div class="text-center py-12 text-muted-foreground">
                 <i class="fas fa-folder-open text-5xl mb-4 opacity-50"></i>
-                <p class="text-lg font-medium mb-2">No medical records yet</p>
+                <p class="text-lg font-medium mb-2">No medical history yet</p>
                 <p class="text-sm">Records from your appointments will appear here</p>
               </div>
             </div>
@@ -311,6 +311,74 @@ const placeholderUser = { email: 'loading@example.com' };
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- AI Chat Modal -->
+  <div id="ai-chat-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 p-4" style="display: none; align-items: center; justify-content: center;">
+    <div class="bg-card rounded-xl shadow-2xl max-w-4xl w-full h-[80vh] flex flex-col border border-border transform transition-all scale-95 opacity-0" id="chat-modal-content">
+      <!-- Header -->
+      <div class="p-6 border-b border-border bg-gradient-to-r from-purple-50 to-pink-50">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-xl font-bold text-foreground flex items-center gap-2">
+              <i class="fas fa-robot text-purple-600"></i>
+              AI Medical Assistant
+            </h3>
+            <p class="text-sm text-muted-foreground mt-1">Ask me anything about your health records, prescriptions, or general health questions</p>
+          </div>
+          <button id="close-chat-modal" class="text-muted-foreground hover:text-foreground transition-colors">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Chat Messages Container -->
+      <div id="chat-messages" class="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-gray-50/50 to-white">
+        <!-- Welcome message -->
+        <div class="flex gap-3 animate-fade-in">
+          <div class="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+            <i class="fas fa-robot text-white text-lg"></i>
+          </div>
+          <div class="flex-1">
+            <div class="bg-white rounded-2xl rounded-tl-none p-4 shadow-md border border-purple-100">
+              <p class="text-sm text-gray-800">
+                👋 Hello! I'm your AI medical assistant. I have access to your medical records and prescriptions, and I'm here to help answer your health-related questions. 
+                <br><br>
+                How can I assist you today?
+              </p>
+            </div>
+            <span class="text-xs text-gray-400 mt-1 ml-2 block">Just now</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Chat Input -->
+      <div class="p-4 border-t border-border bg-white">
+        <div class="flex gap-2">
+          <input
+            type="text"
+            id="chat-input"
+            placeholder="Ask about your health, medications, or medical history..."
+            class="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+            autocomplete="off"
+          />
+          <button
+            id="chat-send-btn"
+            class="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+          >
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </div>
+        <div id="chat-typing-indicator" class="mt-2 text-xs text-gray-400 items-center gap-2" style="display: none;">
+          <div class="flex gap-1">
+            <div class="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style="animation-delay: 0s;"></div>
+            <div class="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style="animation-delay: 0.2s;"></div>
+            <div class="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style="animation-delay: 0.4s;"></div>
+          </div>
+          <span>AI is thinking...</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -532,10 +600,10 @@ const placeholderUser = { email: 'loading@example.com' };
         // Check if tables exist before querying
         let appointments: any[] = [];
         let prescriptions: any[] = [];
-        let recordsCount = 0;
+        let medicalHistory: any[] = [];
 
         try {
-          const [appointmentsResult, prescriptionsResult, recordsResult, requestsResult] = await Promise.all([
+          const [appointmentsResult, prescriptionsResult, medicalHistoryResult, requestsResult] = await Promise.all([
             // Fetch all appointments with medic and hospital info (filter by date in JS if needed)
             supabase
               .from('appointments')
@@ -559,11 +627,16 @@ const placeholderUser = { email: 'loading@example.com' };
               .order('prescribed_date', { ascending: false })
               .limit(5),
             
-            // Fetch medical history count (not medical_records)
+            // Fetch medical history
             supabase
               .from('medical_history')
-              .select('*', { count: 'exact', head: true })
-              .eq('patient_id', userId),
+              .select(`
+                *,
+                medic:profiles!medical_history_medic_id_fkey(id, full_name, department)
+              `)
+              .eq('patient_id', userId)
+              .order('visit_date', { ascending: false })
+              .limit(10),
 
             // Fetch appointment requests with complete info
             supabase
@@ -580,7 +653,7 @@ const placeholderUser = { email: 'loading@example.com' };
 
           appointments = appointmentsResult.data || [];
           prescriptions = prescriptionsResult.data || [];
-          recordsCount = recordsResult.count || 0;
+          medicalHistory = medicalHistoryResult.data || [];
           appointmentRequests = requestsResult.data || [];
 
           if (appointmentsResult.error && appointmentsResult.error.code !== 'PGRST116') {
@@ -591,8 +664,8 @@ const placeholderUser = { email: 'loading@example.com' };
             console.error('Error fetching prescriptions:', prescriptionsResult.error);
           }
 
-          if (recordsResult.error && recordsResult.error.code !== 'PGRST116') {
-            console.error('Error fetching records count:', recordsResult.error);
+          if (medicalHistoryResult.error && medicalHistoryResult.error.code !== 'PGRST116') {
+            console.error('Error fetching medical history:', medicalHistoryResult.error);
           }
 
           if (requestsResult.error && requestsResult.error.code !== 'PGRST116') {
@@ -618,7 +691,7 @@ const placeholderUser = { email: 'loading@example.com' };
           scheduledAppointments.length,
           pendingRequests,
           prescriptions?.length || 0,
-          recordsCount || 0
+          medicalHistory?.length || 0
         );
 
         // Update combined upcoming appointments (requests + scheduled appointments)
@@ -627,6 +700,11 @@ const placeholderUser = { email: 'loading@example.com' };
         // Update prescriptions list
         if (prescriptions && prescriptions.length > 0) {
           updatePrescriptions(prescriptions);
+        }
+
+        // Update medical history display
+        if (medicalHistory && medicalHistory.length > 0) {
+          updateMedicalHistory(medicalHistory);
         }
 
         // Fetch recent activity (appointments + prescriptions as activities)
@@ -800,6 +878,118 @@ const placeholderUser = { email: 'loading@example.com' };
           </div>
         `;
       }).join('');
+    }
+
+    function updateMedicalHistory(records: any[]) {
+      const container = document.getElementById('medical-records-container');
+      if (!container) return;
+
+      container.innerHTML = records.map((record, index) => {
+        const visitDate = new Date(record.visit_date);
+        const dateStr = visitDate.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+
+        const recordId = `record-${record.id || index}`;
+
+        return `
+          <div class="mb-3 rounded-lg border border-border overflow-hidden">
+            <button 
+              class="medical-record-toggle w-full p-4 hover:bg-accent/50 transition-colors text-left"
+              data-record-id="${recordId}"
+            >
+              <div class="flex items-center justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <i class="fas fa-calendar-day text-purple-600"></i>
+                    <p class="font-semibold text-foreground">${dateStr}</p>
+                  </div>
+                  <p class="text-sm text-muted-foreground">
+                    <i class="fas fa-user-md mr-1"></i>
+                    Dr. ${record.medic?.full_name || 'Unknown'}
+                    ${record.medic?.department ? `- ${record.medic.department}` : ''}
+                  </p>
+                </div>
+                <i class="fas fa-chevron-down text-muted-foreground transition-transform record-chevron-${recordId}"></i>
+              </div>
+            </button>
+
+            <div id="${recordId}" class="record-details transition-all duration-300 overflow-hidden" style="max-height: 0; opacity: 0;">
+              <div class="px-4 pb-4 pt-2 border-t border-border">
+                ${record.diagnosis ? `
+                  <div class="mb-3">
+                    <p class="text-sm font-medium text-foreground mb-1">
+                      <i class="fas fa-stethoscope text-blue-600 mr-2"></i>
+                      Diagnosis:
+                    </p>
+                    <p class="text-sm text-muted-foreground pl-6">${record.diagnosis}</p>
+                  </div>
+                ` : ''}
+
+                ${record.symptoms ? `
+                  <div class="mb-3">
+                    <p class="text-sm font-medium text-foreground mb-1">
+                      <i class="fas fa-heartbeat text-red-600 mr-2"></i>
+                      Symptoms:
+                    </p>
+                    <p class="text-sm text-muted-foreground pl-6">${record.symptoms}</p>
+                  </div>
+                ` : ''}
+
+                ${record.treatment ? `
+                  <div class="mb-3">
+                    <p class="text-sm font-medium text-foreground mb-1">
+                      <i class="fas fa-pills text-green-600 mr-2"></i>
+                      Treatment:
+                    </p>
+                    <p class="text-sm text-muted-foreground pl-6">${record.treatment}</p>
+                  </div>
+                ` : ''}
+
+                ${record.notes ? `
+                  <div>
+                    <p class="text-sm font-medium text-foreground mb-1">
+                      <i class="fas fa-notes-medical text-gray-600 mr-2"></i>
+                      Notes:
+                    </p>
+                    <p class="text-sm text-muted-foreground pl-6">${record.notes}</p>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Add click handlers for each record toggle
+      const toggleButtons = container.querySelectorAll('.medical-record-toggle');
+      toggleButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          const recordId = this.getAttribute('data-record-id');
+          const details = document.getElementById(recordId);
+          const chevron = container.querySelector(`.record-chevron-${recordId}`);
+          
+          if (details && chevron) {
+            const isExpanded = details.style.maxHeight !== '0px' && details.style.maxHeight !== '';
+            
+            if (isExpanded) {
+              details.style.maxHeight = '0';
+              details.style.opacity = '0';
+              details.style.paddingTop = '0';
+              details.style.paddingBottom = '0';
+              chevron.style.transform = 'rotate(0deg)';
+            } else {
+              details.style.maxHeight = '500px';
+              details.style.opacity = '1';
+              details.style.paddingTop = '0.5rem';
+              details.style.paddingBottom = '1rem';
+              chevron.style.transform = 'rotate(180deg)';
+            }
+          }
+        });
+      });
     }
 
     // Combined function to display both appointments and requests
@@ -1473,6 +1663,233 @@ const placeholderUser = { email: 'loading@example.com' };
         departmentSection.classList.add('hidden');
       }
     });
+
+    // ========== AI CHAT FUNCTIONALITY ==========
+    let conversationHistory: Array<{ role: 'user' | 'assistant', content: string }> = [];
+    let isProcessing = false;
+
+    // Open/Close AI Chat Modal
+    function openAIChatModal() {
+      const modal = document.getElementById('ai-chat-modal');
+      const modalContent = document.getElementById('chat-modal-content');
+      
+      if (modal && modalContent) {
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+        
+        setTimeout(() => {
+          modalContent.classList.remove('scale-95', 'opacity-0');
+          modalContent.classList.add('scale-100', 'opacity-100');
+        }, 10);
+      }
+    }
+
+    function closeAIChatModal() {
+      const modal = document.getElementById('ai-chat-modal');
+      const modalContent = document.getElementById('chat-modal-content');
+      
+      if (modal && modalContent) {
+        modalContent.classList.remove('scale-100', 'opacity-100');
+        modalContent.classList.add('scale-95', 'opacity-0');
+        
+        setTimeout(() => {
+          modal.style.display = 'none';
+          modal.classList.add('hidden');
+        }, 200);
+      }
+    }
+
+    // Add message to chat UI
+    function addMessageToChat(message: string, isUser: boolean, isStreaming: boolean = false): string | null {
+      const chatMessages = document.getElementById('chat-messages');
+      if (!chatMessages) return null;
+
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'flex gap-3 animate-fade-in';
+      let msgId: string | null = null;
+      
+      if (isUser) {
+        messageDiv.classList.add('flex-row-reverse');
+        messageDiv.innerHTML = `
+          <div class="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
+            <i class="fas fa-user text-white text-lg"></i>
+          </div>
+          <div class="flex-1">
+            <div class="bg-gradient-to-br from-blue-500 to-cyan-500 text-white rounded-2xl rounded-tr-none p-4 shadow-md">
+              <p class="text-sm">${escapeHtml(message)}</p>
+            </div>
+            <span class="text-xs text-gray-400 mt-1 mr-2 block text-right">Just now</span>
+          </div>
+        `;
+      } else {
+        msgId = `msg-${Date.now()}`;
+        messageDiv.innerHTML = `
+          <div class="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+            <i class="fas fa-robot text-white text-lg"></i>
+          </div>
+          <div class="flex-1">
+            <div class="bg-white rounded-2xl rounded-tl-none p-4 shadow-md border border-purple-100">
+              <p id="${msgId}" class="text-sm text-gray-800">${isStreaming ? '' : escapeHtml(message)}</p>
+            </div>
+            <span class="text-xs text-gray-400 mt-1 ml-2 block">Just now</span>
+          </div>
+        `;
+      }
+
+      chatMessages.appendChild(messageDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+
+      return isStreaming && !isUser ? msgId : null;
+    }
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text: string): string {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Send message to AI
+    async function sendMessage(message: string) {
+      if (!message.trim() || isProcessing || !currentUserId) return;
+
+      isProcessing = true;
+      const chatInput = document.getElementById('chat-input') as HTMLInputElement;
+      const sendBtn = document.getElementById('chat-send-btn') as HTMLButtonElement;
+      const typingIndicator = document.getElementById('chat-typing-indicator');
+
+      if (chatInput) chatInput.value = '';
+      if (sendBtn) sendBtn.disabled = true;
+      if (typingIndicator) typingIndicator.style.display = 'flex';
+
+      // Add user message to UI
+      addMessageToChat(message, true);
+      
+      // Add to conversation history
+      conversationHistory.push({ role: 'user', content: message });
+
+      try {
+        // Create streaming message
+        const messageId = addMessageToChat('', false, true);
+        let fullResponse = '';
+
+        // Call chat API with streaming
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message,
+            patientId: currentUserId,
+            conversationHistory: conversationHistory.slice(-10) // Keep last 10 messages for context
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to get AI response');
+        }
+
+        // Handle streaming response
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+
+        if (reader) {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6);
+                
+                if (data === '[DONE]') {
+                  break;
+                }
+
+                try {
+                  const parsed = JSON.parse(data);
+                  if (parsed.text) {
+                    fullResponse += parsed.text;
+                    
+                    // Update the message in real-time
+                    if (messageId) {
+                      const messageEl = document.getElementById(messageId);
+                      if (messageEl) {
+                        messageEl.textContent = fullResponse;
+                        
+                        // Auto-scroll
+                        const chatMessages = document.getElementById('chat-messages');
+                        if (chatMessages) {
+                          chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }
+                      }
+                    }
+                  }
+                } catch (e) {
+                  // Skip invalid JSON
+                }
+              }
+            }
+          }
+        }
+
+        // Add assistant response to conversation history
+        conversationHistory.push({ role: 'assistant', content: fullResponse });
+
+      } catch (error) {
+        console.error('Chat error:', error);
+        addMessageToChat('Sorry, I encountered an error. Please try again.', false);
+      } finally {
+        isProcessing = false;
+        if (sendBtn) sendBtn.disabled = false;
+        if (typingIndicator) typingIndicator.style.display = 'none';
+      }
+    }
+
+    // Chat event listeners
+    const chatInput = document.getElementById('chat-input') as HTMLInputElement;
+    const chatSendBtn = document.getElementById('chat-send-btn');
+
+    chatSendBtn?.addEventListener('click', () => {
+      const message = chatInput?.value;
+      if (message) {
+        sendMessage(message);
+      }
+    });
+
+    chatInput?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const message = chatInput.value;
+        if (message) {
+          sendMessage(message);
+        }
+      }
+    });
+
+    // AI Chat Modal event listeners
+    document.getElementById('close-chat-modal')?.addEventListener('click', closeAIChatModal);
+    
+    // Click outside modal to close
+    document.getElementById('ai-chat-modal')?.addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) {
+        closeAIChatModal();
+      }
+    });
+
+    // Wait for Quick Actions to be loaded, then add AI Assistant button handler
+    setTimeout(() => {
+      // Find all Quick Actions buttons and attach AI Assistant handler
+      const quickActionButtons = document.querySelectorAll('.w-full.px-4.py-3');
+      quickActionButtons.forEach(btn => {
+        const btnText = btn.textContent?.trim();
+        if (btnText === 'AI Assistant') {
+          btn.addEventListener('click', openAIChatModal);
+        }
+      });
+    }, 1000);
 
     // Load dashboard
     loadDashboardData();
