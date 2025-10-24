@@ -52,8 +52,34 @@ const placeholderUser = { email: 'loading@example.com' };
       </div>
 
       <!-- Prescription Search Section -->
-      <div id="prescription-search-section">
-        <!-- Will be populated by JavaScript -->
+      <div class="bg-white rounded-xl shadow-lg border border-border overflow-hidden mb-8">
+        <div class="p-6 border-b border-border bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+              <i class="fas fa-search text-white text-2xl"></i>
+            </div>
+            <div>
+              <h2 class="text-2xl font-bold text-foreground">Patient & Prescription Search</h2>
+              <p class="text-sm text-muted-foreground">Search by patient name, email, CNP, or MC barcode</p>
+            </div>
+          </div>
+          <div class="relative">
+            <input 
+              type="text" 
+              id="patient-search"
+              class="w-full px-4 py-3 pr-12 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+              placeholder="Search by name, email, CNP, or MC barcode..."
+            />
+            <i class="fas fa-search absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+          </div>
+        </div>
+        <div id="search-results" class="p-6 max-h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+          <div class="text-center py-12 text-muted-foreground">
+            <i class="fas fa-pills text-5xl mb-4 opacity-50"></i>
+            <p class="text-lg font-medium mb-2">Search for a Patient</p>
+            <p class="text-sm">Enter patient name, email, CNP, or scan their MediConnect Card barcode</p>
+          </div>
+        </div>
       </div>
       
       <!-- Recent Dispensations -->
@@ -148,8 +174,8 @@ const placeholderUser = { email: 'loading@example.com' };
         pharmacyNameHeaderEl.textContent = pharmacy.name;
       }
 
-      // Load prescription search component
-      await loadPrescriptionSearch();
+      // Set up patient search
+      setupPatientSearch();
 
       // Load recent dispensations
       await loadRecentDispensations();
@@ -164,31 +190,435 @@ const placeholderUser = { email: 'loading@example.com' };
     }
   }
 
-  async function loadPrescriptionSearch() {
-    const container = document.getElementById('prescription-search-section');
+  function setupPatientSearch() {
+    const searchInput = document.getElementById('patient-search') as HTMLInputElement;
+    let searchTimeout: any;
+
+    searchInput?.addEventListener('input', (e) => {
+      clearTimeout(searchTimeout);
+      const query = (e.target as HTMLInputElement).value.trim();
+
+      if (!query) {
+        const container = document.getElementById('search-results');
+        if (container) {
+          container.innerHTML = `
+            <div class="text-center py-12 text-muted-foreground">
+              <i class="fas fa-pills text-5xl mb-4 opacity-50"></i>
+              <p class="text-lg font-medium mb-2">Search for a Patient</p>
+              <p class="text-sm">Enter patient name, email, CNP, or scan their MediConnect Card barcode</p>
+            </div>
+          `;
+        }
+        return;
+      }
+
+      // Debounce search
+      searchTimeout = setTimeout(() => {
+        searchPatients(query);
+      }, 300);
+    });
+  }
+
+  async function searchPatients(query: string) {
+    const container = document.getElementById('search-results');
     if (!container) return;
 
-    // For now, show a simple search interface
-    // You can expand this later with the full PrescriptionSearch component logic
+    const searchLower = query.toLowerCase();
+
+    // Check if barcode search
+    if (searchLower.startsWith('mc')) {
+      container.innerHTML = `
+        <div class="text-center py-12">
+          <i class="fas fa-spinner fa-spin text-4xl text-primary mb-4"></i>
+          <p class="text-muted-foreground">Looking up barcode...</p>
+        </div>
+      `;
+
+      try {
+        const { data: patient, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('barcode_id', query.toUpperCase())
+          .eq('role', 'patient')
+          .single();
+
+        if (error || !patient) {
+          container.innerHTML = `
+            <div class="text-center py-12">
+              <i class="fas fa-barcode text-5xl mb-4 opacity-50 text-orange-500"></i>
+              <p class="text-lg font-medium mb-2 text-foreground">Barcode Not Found</p>
+              <p class="text-sm text-muted-foreground">The MediConnect Card barcode could not be found.</p>
+            </div>
+          `;
+          return;
+        }
+
+        await displayPatientPrescriptions(patient, true);
+      } catch (error) {
+        console.error('Error searching barcode:', error);
+        container.innerHTML = `
+          <div class="text-center py-12 text-red-500">
+            <i class="fas fa-exclamation-triangle text-5xl mb-4"></i>
+            <p>Error looking up barcode</p>
+          </div>
+        `;
+      }
+    } else {
+      // Normal search
+      container.innerHTML = `
+        <div class="text-center py-12">
+          <i class="fas fa-spinner fa-spin text-4xl text-primary mb-4"></i>
+          <p class="text-muted-foreground">Searching...</p>
+        </div>
+      `;
+
+      try {
+        const { data: patients, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'patient')
+          .or(`full_name.ilike.%${query}%,email.ilike.%${query}%,cnp.ilike.%${query}%`)
+          .limit(10);
+
+        if (error) throw error;
+
+        if (!patients || patients.length === 0) {
+          container.innerHTML = `
+            <div class="text-center py-12 text-muted-foreground">
+              <i class="fas fa-user-slash text-5xl mb-4 opacity-50"></i>
+              <p class="text-lg font-medium mb-2">No Patients Found</p>
+              <p class="text-sm">Try a different search or enter a MC barcode</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = `
+          <div class="space-y-3">
+            ${patients.map(patient => `
+              <div class="p-4 rounded-lg border border-border hover:bg-blue-50/50 transition-all cursor-pointer" onclick="selectPatient('${patient.id}')">
+                <div class="flex items-start gap-3">
+                  <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
+                    ${patient.full_name?.charAt(0).toUpperCase() || 'P'}
+                  </div>
+                  <div class="flex-1">
+                    <p class="font-semibold text-foreground">${patient.full_name || 'Unknown Patient'}</p>
+                    <p class="text-sm text-muted-foreground">${patient.email}</p>
+                    ${patient.cnp ? `<p class="text-xs text-muted-foreground mt-1">CNP: ${patient.cnp}</p>` : ''}
+                  </div>
+                  <i class="fas fa-chevron-right text-gray-400"></i>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } catch (error) {
+        console.error('Error searching patients:', error);
+        container.innerHTML = `
+          <div class="text-center py-12 text-red-500">
+            <i class="fas fa-exclamation-triangle text-5xl mb-4"></i>
+            <p>Error searching patients</p>
+          </div>
+        `;
+      }
+    }
+  }
+
+  (window as any).selectPatient = async function(patientId: string) {
+    const { data: patient, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', patientId)
+      .single();
+
+    if (!error && patient) {
+      await displayPatientPrescriptions(patient, false);
+    }
+  };
+
+  async function displayPatientPrescriptions(patient: any, isBarcode: boolean) {
+    const container = document.getElementById('search-results');
+    if (!container) return;
+
     container.innerHTML = `
-      <div class="bg-white rounded-xl shadow-lg border border-border overflow-hidden mb-8">
-        <div class="p-6 border-b border-border bg-gradient-to-r from-blue-50 to-indigo-50">
-          <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-              <i class="fas fa-search text-white text-2xl"></i>
+      <div class="text-center py-12">
+        <i class="fas fa-spinner fa-spin text-4xl text-primary mb-4"></i>
+        <p class="text-muted-foreground">Loading prescriptions...</p>
+      </div>
+    `;
+
+    try {
+      const { data: prescriptions, error } = await supabase
+        .from('prescriptions')
+        .select(`
+          *,
+          medic:profiles!prescriptions_medic_id_fkey(full_name, department),
+          dispensations:prescription_dispensations(id, dose_number, dispensed_at, pharmacist:profiles(full_name))
+        `)
+        .eq('patient_id', patient.id)
+        .order('prescribed_date', { ascending: false });
+
+      if (error) throw error;
+
+      const successBanner = isBarcode ? `
+        <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700">
+          <i class="fas fa-check-circle"></i>
+          <span class="text-sm font-medium">Patient found via MediConnect Card barcode!</span>
+        </div>
+      ` : '';
+
+      container.innerHTML = `
+        ${successBanner}
+        <div class="mb-6 p-5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 ${isBarcode ? 'border-green-300' : 'border-blue-200'}">
+          <div class="flex items-start gap-4">
+            <div class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-2xl flex-shrink-0 ${isBarcode ? 'ring-4 ring-green-300' : ''}">
+              ${patient.full_name?.charAt(0).toUpperCase() || 'P'}
             </div>
-            <div>
-              <h2 class="text-2xl font-bold text-foreground">Search Prescriptions</h2>
-              <p class="text-sm text-muted-foreground">Search by patient CNP, name, or medication</p>
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-1">
+                <h3 class="text-2xl font-bold text-foreground">${patient.full_name || 'Unknown Patient'}</h3>
+                ${isBarcode ? '<i class="fas fa-barcode text-green-600" title="Found via barcode"></i>' : ''}
+              </div>
+              <p class="text-sm text-muted-foreground">${patient.email}</p>
+              ${patient.cnp ? `<p class="text-sm text-muted-foreground">CNP: ${patient.cnp}</p>` : ''}
             </div>
+            <button onclick="clearSearch()" class="px-4 py-2 text-sm border border-border rounded-lg hover:bg-white transition-colors">
+              <i class="fas fa-times mr-2"></i>Close
+            </button>
           </div>
         </div>
-        <div class="p-6">
-          <p class="text-muted-foreground">Prescription search functionality will be implemented here.</p>
+
+        ${!prescriptions || prescriptions.length === 0 ? `
+          <div class="text-center py-12 text-muted-foreground">
+            <i class="fas fa-prescription-bottle text-5xl mb-4 opacity-50"></i>
+            <p class="text-lg font-medium mb-2">No Prescriptions Found</p>
+            <p class="text-sm">This patient has no prescriptions on file</p>
+          </div>
+        ` : `
+          <div class="space-y-4">
+            <h4 class="text-lg font-bold text-foreground flex items-center gap-2">
+              <i class="fas fa-prescription"></i>
+              Active Prescriptions (${prescriptions.filter((p: any) => p.status === 'active' && !p.is_invalidated).length})
+            </h4>
+            ${prescriptions.map((rx: any) => renderPrescriptionCard(rx, patient)).join('')}
+          </div>
+        `}
+      `;
+    } catch (error) {
+      console.error('Error loading prescriptions:', error);
+      container.innerHTML = `
+        <div class="text-center py-12 text-red-500">
+          <i class="fas fa-exclamation-triangle text-5xl mb-4"></i>
+          <p>Error loading prescriptions</p>
         </div>
+      `;
+    }
+  }
+
+  function renderPrescriptionCard(rx: any, patient: any) {
+    const isActive = rx.status === 'active' && !rx.is_invalidated;
+    const dosesRemaining = rx.total_doses - rx.doses_dispensed;
+    const canDispense = isActive && dosesRemaining > 0;
+
+    const statusConfig: any = {
+      active: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', icon: 'fa-check-circle' },
+      completed: { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700', icon: 'fa-flag-checkered' },
+      cancelled: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', icon: 'fa-ban' }
+    };
+
+    const status = rx.is_invalidated ? 'invalidated' : rx.status;
+    const config = status === 'invalidated' 
+      ? { bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-700', icon: 'fa-exclamation-triangle' }
+      : statusConfig[rx.status] || statusConfig.active;
+
+    return `
+      <div class="p-5 rounded-lg border-2 ${config.border} ${config.bg}">
+        <div class="flex items-start justify-between mb-4">
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <h5 class="text-xl font-bold text-foreground">${rx.medication_name}</h5>
+              <span class="px-3 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text} border ${config.border}">
+                <i class="fas ${config.icon} mr-1"></i>
+                ${rx.is_invalidated ? 'INVALIDATED' : rx.status.toUpperCase()}
+              </span>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+              <div>
+                <p class="text-muted-foreground">Dosage</p>
+                <p class="font-semibold">${rx.dosage}</p>
+              </div>
+              <div>
+                <p class="text-muted-foreground">Frequency</p>
+                <p class="font-semibold">${rx.frequency}</p>
+              </div>
+              ${rx.duration ? `
+                <div>
+                  <p class="text-muted-foreground">Duration</p>
+                  <p class="font-semibold">${rx.duration}</p>
+                </div>
+              ` : ''}
+              <div>
+                <p class="text-muted-foreground">Doses</p>
+                <p class="font-semibold ${dosesRemaining === 0 ? 'text-red-600' : ''}">${rx.doses_dispensed} / ${rx.total_doses} dispensed</p>
+              </div>
+              <div>
+                <p class="text-muted-foreground">Prescribed By</p>
+                <p class="font-semibold">${rx.medic?.full_name || 'Unknown'}</p>
+              </div>
+              <div>
+                <p class="text-muted-foreground">Date</p>
+                <p class="font-semibold">${new Date(rx.prescribed_date).toLocaleDateString()}</p>
+              </div>
+            </div>
+            ${rx.instructions ? `
+              <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
+                <p class="text-sm font-semibold text-blue-900 mb-1"><i class="fas fa-info-circle mr-1"></i>Instructions</p>
+                <p class="text-sm text-blue-800">${rx.instructions}</p>
+              </div>
+            ` : ''}
+            ${rx.is_invalidated ? `
+              <div class="mt-3 p-3 bg-red-100 border border-red-300 rounded">
+                <p class="text-sm font-semibold text-red-900 mb-1"><i class="fas fa-ban mr-1"></i>Invalidation Reason</p>
+                <p class="text-sm text-red-800">${rx.invalidation_reason || 'No reason provided'}</p>
+                <p class="text-xs text-red-600 mt-1">Invalidated on ${new Date(rx.invalidated_at).toLocaleString()}</p>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+
+        ${canDispense ? `
+          <div class="flex gap-3 pt-4 border-t border-border">
+            <button 
+              onclick="dispenseDose('${rx.id}', '${patient.id}', ${rx.doses_dispensed + 1}, '${rx.medication_name}')"
+              class="flex-1 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl font-medium"
+            >
+              <i class="fas fa-pills mr-2"></i>
+              Dispense Dose ${rx.doses_dispensed + 1} of ${rx.total_doses}
+            </button>
+            <button 
+              onclick="invalidatePrescription('${rx.id}', '${rx.medication_name}')"
+              class="px-4 py-3 border-2 border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-all font-medium"
+            >
+              <i class="fas fa-ban mr-2"></i>
+              Invalidate
+            </button>
+          </div>
+        ` : !isActive ? `
+          <div class="pt-4 border-t border-border text-center text-sm text-muted-foreground">
+            This prescription is ${rx.is_invalidated ? 'invalidated' : rx.status} and cannot be dispensed
+          </div>
+        ` : dosesRemaining === 0 ? `
+          <div class="pt-4 border-t border-border text-center text-sm text-orange-600 font-medium">
+            <i class="fas fa-exclamation-circle mr-2"></i>
+            All doses have been dispensed
+          </div>
+        ` : ''}
       </div>
     `;
   }
+
+  (window as any).clearSearch = function() {
+    const searchInput = document.getElementById('patient-search') as HTMLInputElement;
+    if (searchInput) searchInput.value = '';
+    const container = document.getElementById('search-results');
+    if (container) {
+      container.innerHTML = `
+        <div class="text-center py-12 text-muted-foreground">
+          <i class="fas fa-pills text-5xl mb-4 opacity-50"></i>
+          <p class="text-lg font-medium mb-2">Search for a Patient</p>
+          <p class="text-sm">Enter patient name, email, CNP, or scan their MediConnect Card barcode</p>
+        </div>
+      `;
+    }
+  };
+
+  (window as any).dispenseDose = async function(prescriptionId: string, patientId: string, doseNumber: number, medicationName: string) {
+    const notes = prompt(`Dispensing ${medicationName} - Dose ${doseNumber}\n\nOptional notes for this dispensation:`);
+    
+    if (notes === null) return; // User cancelled
+
+    try {
+      // Record dispensation
+      const { error: dispError } = await supabase
+        .from('prescription_dispensations')
+        .insert({
+          prescription_id: prescriptionId,
+          pharmacy_id: currentPharmacyId,
+          pharmacist_id: currentPharmacistId,
+          dose_number: doseNumber,
+          notes: notes || null
+        });
+
+      if (dispError) throw dispError;
+
+      // Update prescription doses_dispensed
+      const { error: rxError } = await supabase
+        .from('prescriptions')
+        .update({ 
+          doses_dispensed: doseNumber,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', prescriptionId);
+
+      if (rxError) throw rxError;
+
+      alert(`✅ Dose ${doseNumber} dispensed successfully!`);
+      
+      // Reload patient prescriptions
+      const { data: patient } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', patientId)
+        .single();
+
+      if (patient) {
+        await displayPatientPrescriptions(patient, false);
+        await loadRecentDispensations();
+      }
+    } catch (error: any) {
+      console.error('Error dispensing dose:', error);
+      alert(`❌ Error: ${error.message}`);
+    }
+  };
+
+  (window as any).invalidatePrescription = async function(prescriptionId: string, medicationName: string) {
+    const reason = prompt(`Invalidating prescription: ${medicationName}\n\nPlease provide a reason for invalidation:`);
+    
+    if (!reason) {
+      alert('Invalidation reason is required');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to invalidate this prescription?\n\nMedication: ${medicationName}\nReason: ${reason}\n\nThis action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('prescriptions')
+        .update({
+          is_invalidated: true,
+          invalidated_at: new Date().toISOString(),
+          invalidated_by: currentPharmacistId,
+          invalidation_reason: reason,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', prescriptionId);
+
+      if (error) throw error;
+
+      alert('✅ Prescription invalidated successfully');
+      
+      // Reload current view
+      const searchInput = document.getElementById('patient-search') as HTMLInputElement;
+      if (searchInput && searchInput.value) {
+        await searchPatients(searchInput.value);
+      }
+    } catch (error: any) {
+      console.error('Error invalidating prescription:', error);
+      alert(`❌ Error: ${error.message}`);
+    }
+  };
 
   async function loadRecentDispensations() {
     try {

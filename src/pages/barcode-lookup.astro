@@ -1,0 +1,354 @@
+---
+import MainLayout from '../layouts/main.astro';
+import Navbar from '../components/Navbar.astro';
+
+const placeholderUser = { email: 'loading@example.com' };
+---
+
+<MainLayout content={{ title: 'Barcode Lookup - MediConnect' }}>
+  <link 
+    rel="stylesheet" 
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+    crossorigin="anonymous"
+  />
+  
+  <Navbar user={placeholderUser} />
+
+  <div class="min-h-screen bg-gradient-to-br from-blue-50 via-background to-purple-50">
+    <div class="max-w-4xl mx-auto px-4 py-8">
+      <!-- Header -->
+      <div class="mb-8 text-center">
+        <h1 class="text-4xl font-bold text-foreground mb-2">
+          <i class="fas fa-barcode text-primary mr-3"></i>
+          Barcode Lookup
+        </h1>
+        <p class="text-muted-foreground">Scan or enter a MediConnect Card barcode to view patient information</p>
+      </div>
+
+      <!-- Search Section -->
+      <div class="bg-card rounded-xl shadow-lg border border-border p-8 mb-8">
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-foreground mb-3">Enter Barcode ID</label>
+          <div class="flex gap-3">
+            <input 
+              type="text" 
+              id="barcode-input"
+              placeholder="MC000000000000000..."
+              class="flex-1 px-4 py-3 bg-background rounded-lg border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary text-lg font-mono"
+            />
+            <button 
+              id="lookup-btn"
+              class="px-6 py-3 bg-gradient-to-r from-primary to-blue-600 text-white rounded-lg hover:from-primary/90 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl font-medium"
+            >
+              <i class="fas fa-search mr-2"></i>
+              Lookup
+            </button>
+          </div>
+          <p class="text-xs text-muted-foreground mt-2">
+            <i class="fas fa-info-circle mr-1"></i>
+            Enter the full barcode ID from the patient's MediConnect Card
+          </p>
+        </div>
+
+        <!-- Quick Scan Button (placeholder for future camera integration) -->
+        <div class="pt-4 border-t border-border">
+          <button 
+            id="scan-btn"
+            class="w-full px-4 py-3 border-2 border-dashed border-primary/30 rounded-lg text-primary hover:bg-primary/5 transition-colors"
+          >
+            <i class="fas fa-camera mr-2"></i>
+            Scan Barcode with Camera (Coming Soon)
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div id="loading-state" class="hidden text-center py-12">
+        <i class="fas fa-spinner fa-spin text-4xl text-primary mb-4"></i>
+        <p class="text-muted-foreground">Looking up patient...</p>
+      </div>
+
+      <!-- Error State -->
+      <div id="error-state" class="hidden bg-red-50 border-2 border-red-200 rounded-xl p-8 text-center">
+        <i class="fas fa-exclamation-circle text-5xl text-red-500 mb-4"></i>
+        <h3 class="text-xl font-bold text-red-900 mb-2">Patient Not Found</h3>
+        <p id="error-message" class="text-red-700 mb-4">The barcode ID you entered could not be found in our system.</p>
+        <button 
+          id="try-again-btn"
+          class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+
+      <!-- Patient Information Card -->
+      <div id="patient-info" class="hidden">
+        <div class="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
+          <div class="p-6 bg-gradient-to-r from-primary/10 to-blue-50 border-b border-border">
+            <h2 class="text-2xl font-bold text-foreground flex items-center gap-3">
+              <i class="fas fa-user-circle text-primary"></i>
+              Patient Information
+            </h2>
+          </div>
+          
+          <div class="p-8">
+            <div class="flex items-start gap-6 mb-8 pb-8 border-b border-border">
+              <div class="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white text-4xl font-bold flex-shrink-0">
+                <span id="patient-avatar">P</span>
+              </div>
+              <div class="flex-1">
+                <h3 id="patient-name" class="text-3xl font-bold text-foreground mb-2">Loading...</h3>
+                <p class="text-muted-foreground mb-3">
+                  <i class="fas fa-envelope mr-2"></i>
+                  <span id="patient-email">Loading...</span>
+                </p>
+                <div class="flex gap-2">
+                  <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                    <i class="fas fa-user mr-1"></i>
+                    Patient
+                  </span>
+                  <span id="verification-badge" class="hidden px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                    <i class="fas fa-check-circle mr-1"></i>
+                    Verified
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="p-4 bg-accent/30 rounded-lg border border-border">
+                <p class="text-xs text-muted-foreground uppercase tracking-widest font-semibold mb-2">CNP (Personal ID)</p>
+                <p id="patient-cnp" class="text-lg font-semibold text-foreground">Loading...</p>
+              </div>
+              <div class="p-4 bg-accent/30 rounded-lg border border-border">
+                <p class="text-xs text-muted-foreground uppercase tracking-widest font-semibold mb-2">Phone Number</p>
+                <p id="patient-phone" class="text-lg font-semibold text-foreground">Not available</p>
+              </div>
+              <div class="p-4 bg-accent/30 rounded-lg border border-border">
+                <p class="text-xs text-muted-foreground uppercase tracking-widest font-semibold mb-2">Date of Birth</p>
+                <p id="patient-dob" class="text-lg font-semibold text-foreground">Not available</p>
+              </div>
+              <div class="p-4 bg-accent/30 rounded-lg border border-border">
+                <p class="text-xs text-muted-foreground uppercase tracking-widest font-semibold mb-2">Member Since</p>
+                <p id="patient-created" class="text-lg font-semibold text-foreground">Loading...</p>
+              </div>
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-border">
+              <div class="flex gap-3">
+                <a 
+                  href="#"
+                  id="view-medical-history-btn"
+                  class="flex-1 px-4 py-3 bg-gradient-to-r from-primary to-blue-600 text-white rounded-lg hover:from-primary/90 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl text-center font-medium"
+                >
+                  <i class="fas fa-file-medical mr-2"></i>
+                  View Medical History
+                </a>
+                <button 
+                  id="close-patient-info-btn"
+                  class="px-6 py-3 border border-border rounded-lg hover:bg-accent transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="hidden fixed top-4 right-4 z-50 bg-card border border-border rounded-lg shadow-xl p-4 max-w-md">
+    <div class="flex items-center gap-3">
+      <div id="toast-icon"></div>
+      <p id="toast-message" class="text-foreground"></p>
+    </div>
+  </div>
+</MainLayout>
+
+<script>
+  import { supabase } from '../lib/supabase';
+
+  let currentUser: any = null;
+
+  // Check authentication and authorization
+  async function checkAuth() {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      window.location.href = '/auth';
+      return false;
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .single();
+
+    currentUser = { ...session.user, role: profile?.role };
+
+    // Only allow medics and admins to use barcode lookup
+    if (profile?.role !== 'hospital_medic' && profile?.role !== 'hospital_admin' && profile?.role !== 'site_admin') {
+      showToast('Access denied. Only medical staff can use barcode lookup.', 'error');
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 2000);
+      return false;
+    }
+
+    return true;
+  }
+
+  // Lookup patient by barcode
+  async function lookupBarcode(barcodeId: string) {
+    const loadingState = document.getElementById('loading-state');
+    const errorState = document.getElementById('error-state');
+    const patientInfo = document.getElementById('patient-info');
+    const errorMessage = document.getElementById('error-message');
+
+    // Show loading
+    loadingState?.classList.remove('hidden');
+    errorState?.classList.add('hidden');
+    patientInfo?.classList.add('hidden');
+
+    try {
+      // Query for patient with this barcode_id
+      const { data: patient, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('barcode_id', barcodeId)
+        .eq('role', 'patient')
+        .single();
+
+      loadingState?.classList.add('hidden');
+
+      if (error || !patient) {
+        if (errorMessage) {
+          errorMessage.textContent = 'The barcode ID could not be found. Please verify the code and try again.';
+        }
+        errorState?.classList.remove('hidden');
+        return;
+      }
+
+      // Display patient information
+      displayPatientInfo(patient);
+      
+    } catch (error) {
+      console.error('Error looking up barcode:', error);
+      loadingState?.classList.add('hidden');
+      if (errorMessage) {
+        errorMessage.textContent = 'An error occurred while looking up the barcode. Please try again.';
+      }
+      errorState?.classList.remove('hidden');
+    }
+  }
+
+  function displayPatientInfo(patient: any) {
+    const patientInfo = document.getElementById('patient-info');
+    const patientAvatar = document.getElementById('patient-avatar');
+    const patientName = document.getElementById('patient-name');
+    const patientEmail = document.getElementById('patient-email');
+    const patientCnp = document.getElementById('patient-cnp');
+    const patientPhone = document.getElementById('patient-phone');
+    const patientDob = document.getElementById('patient-dob');
+    const patientCreated = document.getElementById('patient-created');
+    const viewHistoryBtn = document.getElementById('view-medical-history-btn');
+    const verificationBadge = document.getElementById('verification-badge');
+
+    if (patientAvatar) patientAvatar.textContent = patient.full_name?.charAt(0).toUpperCase() || 'P';
+    if (patientName) patientName.textContent = patient.full_name || 'Unknown Patient';
+    if (patientEmail) patientEmail.textContent = patient.email || 'No email';
+    if (patientCnp) patientCnp.textContent = patient.cnp || 'Not available';
+    if (patientPhone) patientPhone.textContent = patient.phone_number || 'Not available';
+    if (patientDob) patientDob.textContent = patient.date_of_birth 
+      ? new Date(patient.date_of_birth).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+      : 'Not available';
+    if (patientCreated) {
+      patientCreated.textContent = new Date(patient.created_at).toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    }
+
+    // Show verification badge if email is verified
+    if (patient.email_verified && verificationBadge) {
+      verificationBadge.classList.remove('hidden');
+    }
+
+    // Set up medical history link - for now just close the modal
+    // In production, this would navigate to patient medical records
+    if (viewHistoryBtn) {
+      (viewHistoryBtn as HTMLAnchorElement).href = `/patient-records?id=${patient.id}`;
+    }
+
+    patientInfo?.classList.remove('hidden');
+    showToast('Patient found successfully!', 'success');
+  }
+
+  function showToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toast-message');
+    const toastIcon = document.getElementById('toast-icon');
+    
+    if (!toast || !toastMessage || !toastIcon) return;
+
+    const icons = {
+      success: '<i class="fas fa-check-circle text-green-500 text-xl"></i>',
+      error: '<i class="fas fa-exclamation-circle text-red-500 text-xl"></i>',
+      info: '<i class="fas fa-info-circle text-blue-500 text-xl"></i>'
+    };
+
+    toastIcon.innerHTML = icons[type];
+    toastMessage.textContent = message;
+    
+    toast.classList.remove('hidden');
+    
+    setTimeout(() => {
+      toast.classList.add('hidden');
+    }, 4000);
+  }
+
+  // Event listeners
+  document.getElementById('lookup-btn')?.addEventListener('click', () => {
+    const input = document.getElementById('barcode-input') as HTMLInputElement;
+    const barcodeId = input?.value.trim();
+    
+    if (!barcodeId) {
+      showToast('Please enter a barcode ID', 'error');
+      return;
+    }
+    
+    lookupBarcode(barcodeId);
+  });
+
+  // Allow enter key to submit
+  document.getElementById('barcode-input')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById('lookup-btn')?.click();
+    }
+  });
+
+  document.getElementById('try-again-btn')?.addEventListener('click', () => {
+    document.getElementById('error-state')?.classList.add('hidden');
+    const input = document.getElementById('barcode-input') as HTMLInputElement;
+    if (input) input.value = '';
+    input?.focus();
+  });
+
+  document.getElementById('close-patient-info-btn')?.addEventListener('click', () => {
+    document.getElementById('patient-info')?.classList.add('hidden');
+    const input = document.getElementById('barcode-input') as HTMLInputElement;
+    if (input) input.value = '';
+  });
+
+  document.getElementById('scan-btn')?.addEventListener('click', () => {
+    showToast('Camera scanning feature coming soon!', 'info');
+  });
+
+  // Initialize
+  checkAuth();
+</script>
