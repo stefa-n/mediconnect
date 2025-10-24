@@ -72,8 +72,20 @@
 </div>
 
 <script>
+  // Declare global window functions
+  declare global {
+    interface Window {
+      clearSearch: () => void;
+      displayResults: (prescriptions: any[]) => void;
+      viewPrescriptionDetails: (prescriptionId: string) => void;
+      dispenseDose: (prescriptionId: string) => void;
+      invalidatePrescription: (prescriptionId: string) => void;
+    }
+  }
+
   function clearSearch() {
-    document.getElementById('searchForm')?.reset();
+    const form = document.getElementById('searchForm') as HTMLFormElement;
+    form?.reset();
     document.getElementById('searchResults')?.classList.add('hidden');
   }
   
@@ -155,7 +167,7 @@
     }
   });
   
-  function displayResults(prescriptions) {
+  function displayResults(prescriptions: any[]) {
     const resultsDiv = document.getElementById('searchResults');
     const containerDiv = document.getElementById('resultsContainer');
     
@@ -245,11 +257,11 @@
   
   window.displayResults = displayResults;
   
-  async function viewPrescriptionDetails(prescriptionId) {
+  function viewPrescriptionDetails(prescriptionId: string) {
     window.location.href = `/pharmacist/prescription/${prescriptionId}`;
   }
   
-  async function dispenseDose(prescriptionId) {
+  async function dispenseDose(prescriptionId: string) {
     const notes = prompt('Enter any notes for this dispensation (optional):');
     
     try {
@@ -318,13 +330,14 @@
       
       alert('Dose dispensed successfully!');
       // Re-run the search to refresh results
-      document.getElementById('searchForm')?.dispatchEvent(new Event('submit'));
-    } catch (error) {
+      const searchForm = document.getElementById('searchForm');
+      searchForm?.dispatchEvent(new Event('submit'));
+    } catch (error: any) {
       alert('Error: ' + error.message);
     }
   }
   
-  async function invalidatePrescription(prescriptionId) {
+  async function invalidatePrescription(prescriptionId: string) {
     const reason = prompt('Enter reason for invalidation:');
     
     if (!reason) {
@@ -362,8 +375,9 @@
       
       alert('Prescription invalidated successfully');
       // Re-run the search to refresh results
-      document.getElementById('searchForm')?.dispatchEvent(new Event('submit'));
-    } catch (error) {
+      const searchForm = document.getElementById('searchForm');
+      searchForm?.dispatchEvent(new Event('submit'));
+    } catch (error: any) {
       alert('Error: ' + error.message);
     }
   }

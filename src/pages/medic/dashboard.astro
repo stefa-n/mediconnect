@@ -1243,7 +1243,15 @@ const placeholderUser = { email: 'loading@example.com' };
           cancelled: { bg: 'bg-gray-100', text: 'text-gray-700', icon: 'fa-ban', label: 'Cancelled' }
         };
 
+        const severityConfig: Record<string, any> = {
+          urgent: { bg: 'bg-red-100', text: 'text-red-700', icon: '🔴', label: 'URGENT', priority: 1 },
+          high: { bg: 'bg-orange-100', text: 'text-orange-700', icon: '🟠', label: 'HIGH', priority: 2 },
+          normal: { bg: 'bg-blue-100', text: 'text-blue-700', icon: '🟡', label: 'NORMAL', priority: 3 },
+          low: { bg: 'bg-green-100', text: 'text-green-700', icon: '🟢', label: 'LOW', priority: 4 }
+        };
+
         const config = statusConfig[request.status] || statusConfig.pending;
+        const severityInfo = request.severity ? severityConfig[request.severity] : null;
         const createdDate = new Date(request.created_at).toLocaleDateString('en-US', { 
           month: 'short', 
           day: 'numeric',
@@ -1252,7 +1260,7 @@ const placeholderUser = { email: 'loading@example.com' };
         });
 
         return `
-          <div class="p-4 rounded-lg border border-border hover:bg-accent/30 transition-colors mb-3">
+          <div class="p-4 rounded-lg border ${severityInfo?.priority === 1 ? 'border-red-300 bg-red-50/50' : 'border-border'} hover:bg-accent/30 transition-colors mb-3">
             <div class="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3 mb-3">
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-2">
@@ -1269,6 +1277,13 @@ const placeholderUser = { email: 'loading@example.com' };
                     <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                       <i class="fas fa-stethoscope mr-1"></i>
                       ${request.department}
+                    </span>
+                  </div>
+                ` : ''}
+                ${severityInfo ? `
+                  <div class="ml-12 mb-2">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${severityInfo.bg} ${severityInfo.text}">
+                      ${severityInfo.icon} ${severityInfo.label} PRIORITY
                     </span>
                   </div>
                 ` : ''}
@@ -1298,7 +1313,15 @@ const placeholderUser = { email: 'loading@example.com' };
               <p class="text-sm text-foreground"><strong>Reason:</strong> ${request.reason}</p>
             </div>
 
-            <div class="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-3">
+            ${request.severity_details ? `
+              <div class="mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 rounded">
+                <p class="text-xs font-semibold text-blue-800 mb-1">
+                  <i class="fas fa-robot mr-1"></i>
+                  AI Assessment & Recommendations:
+                </p>
+                <p class="text-sm text-blue-700">${request.severity_details}</p>
+              </div>
+            ` : ''}            <div class="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-3">
               <div>
                 <i class="fas fa-calendar mr-1"></i>
                 Requested: ${createdDate}

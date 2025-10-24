@@ -78,216 +78,216 @@ const placeholderUser = { email: 'loading@example.com' };
     </main>
   </div>
 
-  <script>
-    import { supabase } from '../../lib/supabase';
+<script>
+  import { supabase } from '../../lib/supabase';
 
-    let currentPharmacyId: string;
-    let currentPharmacistId: string;
+  let currentPharmacyId: string;
+  let currentPharmacistId: string;
 
-    async function loadDashboard() {
-      try {
-        // Check authentication
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        
-        if (authError || !user) {
-          console.error('Not authenticated:', authError);
-          window.location.href = '/auth';
-          return;
-        }
-
-        // Get user profile
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError || !profile) {
-          console.error('Error fetching profile:', profileError);
-          window.location.href = '/dashboard';
-          return;
-        }
-
-        if (profile.role !== 'pharmacist') {
-          console.error('Not a pharmacist');
-          window.location.href = '/dashboard';
-          return;
-        }
-
-        if (!profile.pharmacy_id) {
-          console.error('No pharmacy assigned');
-          window.location.href = '/dashboard';
-          return;
-        }
-
-        currentPharmacyId = profile.pharmacy_id;
-        currentPharmacistId = user.id;
-
-        // Update pharmacist name
-        const pharmacistNameEl = document.getElementById('pharmacist-name');
-        if (pharmacistNameEl) {
-          pharmacistNameEl.textContent = profile.full_name || user.email?.split('@')[0] || 'Pharmacist';
-        }
-
-        // Get pharmacy information
-        const { data: pharmacy, error: pharmacyError } = await supabase
-          .from('pharmacies')
-          .select('*')
-          .eq('id', profile.pharmacy_id)
-          .single();
-
-        if (pharmacyError || !pharmacy) {
-          console.error('Pharmacy not found');
-          window.location.href = '/dashboard';
-          return;
-        }
-
-        // Update pharmacy name in header
-        const pharmacyNameHeaderEl = document.getElementById('pharmacy-name-header');
-        if (pharmacyNameHeaderEl) {
-          pharmacyNameHeaderEl.textContent = pharmacy.name;
-        }
-
-        // Load prescription search component
-        await loadPrescriptionSearch();
-
-        // Load recent dispensations
-        await loadRecentDispensations();
-
-        // Hide loading, show content
-        document.getElementById('loading-screen')?.classList.add('hidden');
-        document.getElementById('dashboard-content')?.classList.remove('hidden');
-
-      } catch (error) {
-        console.error('Error loading dashboard:', error);
-        window.location.href = '/dashboard';
+  async function loadDashboard() {
+    try {
+      // Check authentication
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        console.error('Not authenticated:', authError);
+        window.location.href = '/auth';
+        return;
       }
+
+      // Get user profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError || !profile) {
+        console.error('Error fetching profile:', profileError);
+        window.location.href = '/dashboard';
+        return;
+      }
+
+      if (profile.role !== 'pharmacist') {
+        console.error('Not a pharmacist');
+        window.location.href = '/dashboard';
+        return;
+      }
+
+      if (!profile.pharmacy_id) {
+        console.error('No pharmacy assigned');
+        window.location.href = '/dashboard';
+        return;
+      }
+
+      currentPharmacyId = profile.pharmacy_id;
+      currentPharmacistId = user.id;
+
+      // Update pharmacist name
+      const pharmacistNameEl = document.getElementById('pharmacist-name');
+      if (pharmacistNameEl) {
+        pharmacistNameEl.textContent = profile.full_name || user.email?.split('@')[0] || 'Pharmacist';
+      }
+
+      // Get pharmacy information
+      const { data: pharmacy, error: pharmacyError } = await supabase
+        .from('pharmacies')
+        .select('*')
+        .eq('id', profile.pharmacy_id)
+        .single();
+
+      if (pharmacyError || !pharmacy) {
+        console.error('Pharmacy not found');
+        window.location.href = '/dashboard';
+        return;
+      }
+
+      // Update pharmacy name in header
+      const pharmacyNameHeaderEl = document.getElementById('pharmacy-name-header');
+      if (pharmacyNameHeaderEl) {
+        pharmacyNameHeaderEl.textContent = pharmacy.name;
+      }
+
+      // Load prescription search component
+      await loadPrescriptionSearch();
+
+      // Load recent dispensations
+      await loadRecentDispensations();
+
+      // Hide loading, show content
+      document.getElementById('loading-screen')?.classList.add('hidden');
+      document.getElementById('dashboard-content')?.classList.remove('hidden');
+
+    } catch (error) {
+      console.error('Error loading dashboard:', error);
+      window.location.href = '/dashboard';
     }
+  }
 
-    async function loadPrescriptionSearch() {
-      const container = document.getElementById('prescription-search-section');
-      if (!container) return;
+  async function loadPrescriptionSearch() {
+    const container = document.getElementById('prescription-search-section');
+    if (!container) return;
 
-      // For now, show a simple search interface
-      // You can expand this later with the full PrescriptionSearch component logic
-      container.innerHTML = `
-        <div class="bg-white rounded-xl shadow-lg border border-border overflow-hidden mb-8">
-          <div class="p-6 border-b border-border bg-gradient-to-r from-blue-50 to-indigo-50">
-            <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                <i class="fas fa-search text-white text-2xl"></i>
-              </div>
-              <div>
-                <h2 class="text-2xl font-bold text-foreground">Search Prescriptions</h2>
-                <p class="text-sm text-muted-foreground">Search by patient CNP, name, or medication</p>
-              </div>
+    // For now, show a simple search interface
+    // You can expand this later with the full PrescriptionSearch component logic
+    container.innerHTML = `
+      <div class="bg-white rounded-xl shadow-lg border border-border overflow-hidden mb-8">
+        <div class="p-6 border-b border-border bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+              <i class="fas fa-search text-white text-2xl"></i>
             </div>
-          </div>
-          <div class="p-6">
-            <p class="text-muted-foreground">Prescription search functionality will be implemented here.</p>
+            <div>
+              <h2 class="text-2xl font-bold text-foreground">Search Prescriptions</h2>
+              <p class="text-sm text-muted-foreground">Search by patient CNP, name, or medication</p>
+            </div>
           </div>
         </div>
-      `;
-    }
+        <div class="p-6">
+          <p class="text-muted-foreground">Prescription search functionality will be implemented here.</p>
+        </div>
+      </div>
+    `;
+  }
 
-    async function loadRecentDispensations() {
-      try {
-        const { data: dispensations, error } = await supabase
-          .from('prescription_dispensations')
-          .select(`
-            *,
-            prescription:prescriptions(
-              id,
-              medication_name,
-              dosage,
-              patient:profiles!prescriptions_patient_id_fkey(id, full_name, cnp)
-            ),
-            pharmacist:profiles(id, full_name),
-            pharmacy:pharmacies(id, name)
-          `)
-          .eq('pharmacy_id', currentPharmacyId)
-          .order('dispensed_at', { ascending: false })
-          .limit(50);
-        
-        if (error) throw error;
-        
-        const container = document.getElementById('recentDispensations');
-        
-        if (!container) return;
-        
-        if (!dispensations || dispensations.length === 0) {
-          container.innerHTML = `
-            <div class="text-center py-12">
-              <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 mb-4">
-                <i class="fas fa-history text-gray-400 text-3xl"></i>
-              </div>
-              <p class="text-muted-foreground text-lg font-medium mb-2">No Recent Dispensations</p>
-              <p class="text-sm text-muted-foreground">Dispensations will appear here once you start dispensing prescriptions</p>
+  async function loadRecentDispensations() {
+    try {
+      const { data: dispensations, error } = await supabase
+        .from('prescription_dispensations')
+        .select(`
+          *,
+          prescription:prescriptions(
+            id,
+            medication_name,
+            dosage,
+            patient:profiles!prescriptions_patient_id_fkey(id, full_name, cnp)
+          ),
+          pharmacist:profiles(id, full_name),
+          pharmacy:pharmacies(id, name)
+        `)
+        .eq('pharmacy_id', currentPharmacyId)
+        .order('dispensed_at', { ascending: false })
+        .limit(50);
+      
+      if (error) throw error;
+      
+      const container = document.getElementById('recentDispensations');
+      
+      if (!container) return;
+      
+      if (!dispensations || dispensations.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12">
+            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 mb-4">
+              <i class="fas fa-history text-gray-400 text-3xl"></i>
             </div>
-          `;
-        } else {
-          container.innerHTML = `
-            <div class="space-y-3">
-              ${dispensations.map((d: any, index: number) => `
-                <div class="flex items-center justify-between p-4 rounded-lg border border-border hover:border-green-300 hover:bg-green-50/50 transition-all duration-200" style="animation: fadeInUp 0.3s ease-out ${index * 0.05}s both;">
-                  <div class="flex-1">
-                    <h4 class="font-semibold text-foreground text-lg">
-                      ${d.prescription?.medication_name || 'Unknown Medication'}
-                    </h4>
-                    <p class="text-sm text-muted-foreground">
-                      Patient: ${d.prescription?.patient?.full_name || 'Unknown'}
-                      ${d.prescription?.patient?.cnp ? `(CNP: ${d.prescription.patient.cnp})` : ''}
-                    </p>
-                    <p class="text-sm text-muted-foreground mt-1">
-                      Dose ${d.dose_number} - Dispensed by ${d.pharmacist?.full_name || 'Unknown'}
-                    </p>
-                    ${d.notes ? `<p class="text-sm text-gray-600 mt-1 italic">"${d.notes}"</p>` : ''}
-                  </div>
-                  <div class="text-right ml-4">
-                    <p class="text-xs text-muted-foreground">
-                      ${new Date(d.dispensed_at).toLocaleString()}
-                    </p>
-                  </div>
+            <p class="text-muted-foreground text-lg font-medium mb-2">No Recent Dispensations</p>
+            <p class="text-sm text-muted-foreground">Dispensations will appear here once you start dispensing prescriptions</p>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div class="space-y-3">
+            ${dispensations.map((d: any, index: number) => `
+              <div class="flex items-center justify-between p-4 rounded-lg border border-border hover:border-green-300 hover:bg-green-50/50 transition-all duration-200" style="animation: fadeInUp 0.3s ease-out ${index * 0.05}s both;">
+                <div class="flex-1">
+                  <h4 class="font-semibold text-foreground text-lg">
+                    ${d.prescription?.medication_name || 'Unknown Medication'}
+                  </h4>
+                  <p class="text-sm text-muted-foreground">
+                    Patient: ${d.prescription?.patient?.full_name || 'Unknown'}
+                    ${d.prescription?.patient?.cnp ? `(CNP: ${d.prescription.patient.cnp})` : ''}
+                  </p>
+                  <p class="text-sm text-muted-foreground mt-1">
+                    Dose ${d.dose_number} - Dispensed by ${d.pharmacist?.full_name || 'Unknown'}
+                  </p>
+                  ${d.notes ? `<p class="text-sm text-gray-600 mt-1 italic">"${d.notes}"</p>` : ''}
                 </div>
-              `).join('')}
-            </div>
-          `;
-        }
-      } catch (error: any) {
-        const container = document.getElementById('recentDispensations');
-        if (container) {
-          container.innerHTML = `
-            <div class="text-center py-8">
-              <p class="text-red-500">Error loading dispensations: ${error.message}</p>
-            </div>
-          `;
-        }
+                <div class="text-right ml-4">
+                  <p class="text-xs text-muted-foreground">
+                    ${new Date(d.dispensed_at).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+    } catch (error: any) {
+      const container = document.getElementById('recentDispensations');
+      if (container) {
+        container.innerHTML = `
+          <div class="text-center py-8">
+            <p class="text-red-500">Error loading dispensations: ${error.message}</p>
+          </div>
+        `;
       }
     }
-    
-    // Load dashboard on page load
-    loadDashboard();
-  </script>
+  }
+  
+  // Load dashboard on page load
+  loadDashboard();
+</script>
 
-  <style>
-    @keyframes progress {
-      0% { width: 0%; }
-      100% { width: 100%; }
-    }
+<style>
+  @keyframes progress {
+    0% { width: 0%; }
+    100% { width: 100%; }
+  }
 
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
     }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 
-    .animate-progress {
-      animation: progress 1.5s ease-in-out infinite;
-    }
-  </style>
+  .animate-progress {
+    animation: progress 1.5s ease-in-out infinite;
+  }
+</style>
 </MainLayout>
